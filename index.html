@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon Melody Maker v5.1 (Fixed Save)</title>
+    <title>Neon Melody Maker v5.2 (Hybrid)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
@@ -181,13 +181,12 @@
             font-size: 12px; padding: 4px; border-radius: 4px; outline: none;
         }
         
-        .loading-indicator {
-            width: 8px; height: 8px; background: var(--neon-blue); border-radius: 50%;
-            animation: blink 1s infinite; display: none; margin-left: 5px;
+        .storage-indicator {
+            font-size: 10px; padding: 2px 6px; border-radius: 4px;
+            border: 1px solid #333; color: #888;
         }
-        @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-        
-        #user-status { font-size: 10px; color: #555; margin-left: auto; margin-right: 10px; display: none; }
+        .storage-cloud { color: #00ccff; border-color: #00ccff; }
+        .storage-local { color: #fbbf24; border-color: #fbbf24; }
     </style>
 </head>
 <body>
@@ -196,10 +195,10 @@
     <header class="app-header">
         <div class="flex items-center gap-4">
             <h1 class="text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-cyan-500" style="filter: drop-shadow(0 0 2px rgba(255,255,255,0.3));">
-                NEON BEAT <span class="text-xs text-gray-500">CLOUD</span>
+                NEON BEAT
             </h1>
-            <div id="auth-loading" class="loading-indicator" title="Connecting..."></div>
-            <div id="user-status">ID: ...</div>
+            <!-- 저장소 모드 표시 (CLOUD / LOCAL) -->
+            <div id="storage-mode" class="storage-indicator">INIT...</div>
             
             <select id="lang-select" class="lang-select" onchange="changeLanguage(this.value)">
                 <option value="ko">🇰🇷 한국어</option>
@@ -261,141 +260,161 @@
     <div id="modal-overlay" onclick="closeModal(event)">
         <div class="modal-box">
             <h2 id="modal-title" class="text-xl font-bold mb-4 text-cyan-400">SAVE SLOT</h2>
-            <div id="slot-loader" class="text-gray-500 text-sm mb-4" style="display:none;">Connecting to Cloud...</div>
             <div id="modal-slots"></div>
             <button class="btn btn-red mt-4 w-full justify-center" onclick="closeModal()" data-i18n="close">CLOSE</button>
         </div>
     </div>
 
 <script type="module">
+/**
+ * ==========================================
+ * Hybrid Storage System (Cloud + Local)
+ * ==========================================
+ */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-/**
- * ==========================================
- * Firebase Setup & Auth
- * ==========================================
- */
-const firebaseConfig = JSON.parse(__firebase_config);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app';
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// Storage Abstraction
+let storageService = {
+    mode: 'local', // 'local' or 'cloud'
+    async init() {},
+    async save(slot, data) {},
+    async load(slot) {},
+    async getMeta(slot) {}
+};
 
-let currentUser = null;
+// Check environment
+const isCloudEnv = typeof __firebase_config !== 'undefined';
 
-// Auth Init - Fix for persistency
-async function initAuth() {
-    const loader = document.getElementById('auth-loading');
-    loader.style.display = 'block';
-    
-    try {
-        // Try Custom Token first (Persistent Identity)
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-            // Fallback (Session Identity)
-            await signInAnonymously(auth);
-        }
-    } catch (error) {
-        console.error("Auth Error:", error);
-        alert("Cloud connection failed. Saving might not work.");
-    }
-}
+if (isCloudEnv) {
+    // --- Cloud Implementation ---
+    const firebaseConfig = JSON.parse(__firebase_config);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app';
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    let currentUser = null;
 
-onAuthStateChanged(auth, async (user) => {
-    document.getElementById('auth-loading').style.display = 'none';
-    if (user) {
-        currentUser = user;
-        const status = document.getElementById('user-status');
-        status.style.display = 'block';
-        status.innerText = `ID: ${user.uid.substring(0, 6)}...`;
-        
-        // 로그인 성공 후 언어 설정 불러오기
-        loadSettings();
-    }
-});
-
-// Load User Settings (Language)
-async function loadSettings() {
-    if (!currentUser) return;
-    try {
-        const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'general');
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (data.language && TRANSLATIONS[data.language]) {
-                window.changeLanguage(data.language, false); // false = don't save again (prevent loop)
+    storageService.mode = 'cloud';
+    storageService.init = async () => {
+        return new Promise((resolve) => {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                signInAnonymously(auth);
             }
-        }
-    } catch (e) { console.log("Settings load error", e); }
-}
-
-// Save User Settings
-async function saveSettings(lang) {
-    if (!currentUser) return;
-    try {
-        const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'general');
-        await setDoc(docRef, { language: lang }, { merge: true });
-    } catch (e) { console.log("Settings save error", e); }
-}
-
-// Global functions for HTML access
-window.saveSlotToCloud = async (slotId) => {
-    if (!currentUser) {
-        alert("Not connected to cloud yet. Please wait.");
-        return;
-    }
-    
-    const data = {
-        date: new Date().toLocaleString(),
-        bpm: BPM,
-        steps: STEPS,
-        tracks: tracks,
-        timestamp: Date.now()
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    currentUser = user;
+                    updateStorageUI('CLOUD');
+                    // Load settings
+                    getDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'general'))
+                        .then(snap => {
+                            if(snap.exists() && snap.data().language) window.changeLanguage(snap.data().language, false);
+                        });
+                    resolve();
+                }
+            });
+        });
     };
 
+    storageService.save = async (slot, data) => {
+        if (!currentUser) throw new Error("No User");
+        await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'slots', `slot_${slot}`), data);
+    };
+
+    storageService.load = async (slot) => {
+        if (!currentUser) throw new Error("No User");
+        const snap = await getDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'slots', `slot_${slot}`));
+        return snap.exists() ? snap.data() : null;
+    };
+
+    storageService.getMeta = async (slot) => {
+        if (!currentUser) return null;
+        try {
+            const snap = await getDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'slots', `slot_${slot}`));
+            return snap.exists() ? snap.data().date : null;
+        } catch { return null; }
+    };
+
+    // Save language setting to cloud
+    window.saveLangToStorage = (lang) => {
+        if(currentUser) {
+            setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'general'), { language: lang }, { merge: true });
+        }
+    };
+
+} else {
+    // --- Local Storage Implementation ---
+    storageService.mode = 'local';
+    storageService.init = async () => {
+        updateStorageUI('LOCAL');
+        const lang = localStorage.getItem('neon_lang');
+        if(lang) window.changeLanguage(lang, false);
+    };
+
+    storageService.save = async (slot, data) => {
+        localStorage.setItem(`neon_slot_${slot}`, JSON.stringify(data));
+    };
+
+    storageService.load = async (slot) => {
+        const raw = localStorage.getItem(`neon_slot_${slot}`);
+        return raw ? JSON.parse(raw) : null;
+    };
+
+    storageService.getMeta = async (slot) => {
+        const raw = localStorage.getItem(`neon_slot_${slot}`);
+        return raw ? JSON.parse(raw).date : null;
+    };
+
+    window.saveLangToStorage = (lang) => {
+        localStorage.setItem('neon_lang', lang);
+    };
+}
+
+function updateStorageUI(mode) {
+    const el = document.getElementById('storage-mode');
+    el.innerText = mode;
+    el.className = `storage-indicator ${mode === 'CLOUD' ? 'storage-cloud' : 'storage-local'}`;
+}
+
+// Global Wrappers
+window.saveSlot = async (slotId) => {
     const btn = document.getElementById(`slot-btn-${slotId}`);
     const originalText = btn.innerHTML;
     btn.innerHTML = `<span class="text-cyan-400">SAVING...</span>`;
-
+    
     try {
-        const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'slots', `slot_${slotId}`);
-        await setDoc(docRef, data);
+        const data = {
+            date: new Date().toLocaleString(),
+            bpm: BPM,
+            steps: STEPS,
+            tracks: tracks
+        };
+        await storageService.save(slotId, data);
         alert(getText('saved') + " " + slotId);
         window.closeModal();
     } catch (e) {
-        alert("Save failed: " + e.message);
+        alert("Save Failed: " + e.message);
         btn.innerHTML = originalText;
     }
 };
 
-window.loadSlotFromCloud = async (slotId) => {
-    if (!currentUser) {
-        alert("Not connected to cloud yet. Please wait.");
-        return;
-    }
-
+window.loadSlot = async (slotId) => {
     const btn = document.getElementById(`slot-btn-${slotId}`);
     const originalText = btn.innerHTML;
     btn.innerHTML = `<span class="text-cyan-400">LOADING...</span>`;
 
     try {
-        const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'slots', `slot_${slotId}`);
-        const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists()) {
-            const data = docSnap.data();
+        const data = await storageService.load(slotId);
+        if (data) {
             BPM = data.bpm;
-            document.getElementById('bpm-slider').value = BPM; 
+            document.getElementById('bpm-slider').value = BPM;
             document.getElementById('bpm-display').innerText = BPM;
             tracks = data.tracks;
-            
-            // 전역 갱신 함수 호출
             window.updateStepCount(data.steps);
             document.getElementById('steps-select').value = data.steps;
-            
             alert(getText('loaded') + " " + slotId);
             window.closeModal();
         } else {
@@ -403,26 +422,15 @@ window.loadSlotFromCloud = async (slotId) => {
             btn.innerHTML = originalText;
         }
     } catch (e) {
-        alert("Load failed: " + e.message);
+        alert("Load Failed: " + e.message);
         btn.innerHTML = originalText;
     }
 };
 
-window.fetchSlotsMetadata = async () => {
+window.renderSlotButtons = async () => {
     const container = document.getElementById('modal-slots');
-    const loader = document.getElementById('slot-loader');
     container.innerHTML = '';
     
-    if (!currentUser) {
-        loader.style.display = 'block';
-        loader.innerText = "Waiting for connection...";
-        // Auth가 완료될 때까지 잠시 대기하거나 재시도하지 않고 사용자에게 알림
-        return; 
-    }
-    
-    loader.style.display = 'block';
-    loader.innerText = "Checking Cloud Storage...";
-
     for (let i = 1; i <= 3; i++) {
         const btn = document.createElement('button');
         btn.className = 'slot-btn';
@@ -430,40 +438,29 @@ window.fetchSlotsMetadata = async () => {
         btn.innerHTML = `<span class="font-bold">SLOT ${i}</span> <span class="text-gray-500 text-xs">...</span>`;
         
         btn.onclick = () => {
-            if (window.currentModalMode === 'save') window.saveSlotToCloud(i);
-            else window.loadSlotFromCloud(i);
+            if (window.currentModalMode === 'save') window.saveSlot(i);
+            else window.loadSlot(i);
         };
         container.appendChild(btn);
 
-        // 비동기로 데이터 존재 여부 확인
-        try {
-            const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'slots', `slot_${i}`);
-            getDoc(docRef).then(snap => {
-                const dateStr = snap.exists() ? snap.data().date : getText('slotEmpty');
-                const colorClass = snap.exists() ? "text-cyan-300" : "text-gray-600";
-                btn.innerHTML = `<span class="font-bold">SLOT ${i}</span> <span class="${colorClass} text-xs">${dateStr}</span>`;
-            });
-        } catch(e) {
-            console.error("Slot fetch error", e);
-        }
+        // Async Metadata Fetch
+        storageService.getMeta(i).then(date => {
+            const dateStr = date || getText('slotEmpty');
+            const colorClass = date ? "text-cyan-300" : "text-gray-600";
+            btn.innerHTML = `<span class="font-bold">SLOT ${i}</span> <span class="${colorClass} text-xs">${dateStr}</span>`;
+        });
     }
-    loader.style.display = 'none';
 };
 
-// Expose hook
-window.changeLanguage = (lang, save = true) => {
-    updateLanguageUI(lang);
-    if (save) saveSettings(lang);
-};
-
-initAuth();
+// Start
+storageService.init();
 
 </script>
 
 <script>
 /**
  * ==========================================
- * Core Logic (Variables & UI)
+ * Core Logic & UI
  * ==========================================
  */
 const TRANSLATIONS = {
@@ -472,7 +469,7 @@ const TRANSLATIONS = {
         save: "저장", load: "불러오기", wav: "WAV ⇩", addTrack: "+ 트랙 추가", saveSlot: "저장 슬롯",
         loadSlot: "불러오기 슬롯", close: "닫기", slotEmpty: "비어있음", saved: "저장됨: 슬롯",
         loaded: "불러옴: 슬롯", rendering: "변환 중...",
-        help: "PC: 스페이스바로 재생/정지 • 모바일: 터치로 재생 • 클라우드에 자동 연결됩니다.",
+        help: "PC: 스페이스바로 재생/정지 • 모바일: 터치로 재생",
         inst_kick: "킥", inst_snare: "스네어", inst_hihat: "하이햇", inst_clap: "박수",
         inst_piano: "피아노", inst_guitar: "기타", inst_bass: "베이스", inst_synth: "신디", inst_marimba: "마림바"
     },
@@ -481,7 +478,7 @@ const TRANSLATIONS = {
         save: "SAVE", load: "LOAD", wav: "WAV ⇩", addTrack: "+ ADD TRACK", saveSlot: "SAVE SLOT",
         loadSlot: "LOAD FROM SLOT", close: "CLOSE", slotEmpty: "Empty", saved: "Saved Slot",
         loaded: "Loaded Slot", rendering: "RENDERING...",
-        help: "PC: Space to Play/Stop • Mobile: Tap to Play • Auto-connected to Cloud.",
+        help: "PC: Space to Play/Stop • Mobile: Tap to Play",
         inst_kick: "Kick", inst_snare: "Snare", inst_hihat: "HiHat", inst_clap: "Clap",
         inst_piano: "Piano", inst_guitar: "Guitar", inst_bass: "Bass", inst_synth: "Synth", inst_marimba: "Marimba"
     },
@@ -566,11 +563,7 @@ function updatePlayButtonText() {
     btn.innerHTML = isPlaying ? t.stop : t.play;
 }
 
-/**
- * ==========================================
- * Audio Engine
- * ==========================================
- */
+// Audio Variables
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 const audioCtx = new AudioContext();
 const masterGain = audioCtx.createGain();
@@ -664,11 +657,6 @@ const Sounds = {
     }
 };
 
-/**
- * ==========================================
- * App State
- * ==========================================
- */
 let STEPS = 16;
 let BPM = 120;
 let isPlaying = false;
@@ -682,7 +670,6 @@ const INST_TYPES = ['Kick', 'Snare', 'HiHat', 'Clap', 'Piano', 'Guitar', 'Bass',
 const MELODY_INSTS = ['Piano', 'Guitar', 'Bass', 'Synth', 'Marimba'];
 const NOTE_KEYS = Object.keys(NOTE_FREQS);
 
-// Tracks data will be accessible globally via window.tracks for firebase saving
 window.tracks = [
     { type: 'Kick', note: '-', vol: 1.0, pattern: Array(16).fill(false) },
     { type: 'Snare', note: '-', vol: 0.8, pattern: Array(16).fill(false) },
@@ -693,7 +680,6 @@ window.tracks[0].pattern[0] = true; window.tracks[0].pattern[8] = true;
 window.tracks[2].pattern[2] = true; window.tracks[2].pattern[6] = true;
 window.tracks[2].pattern[10] = true; window.tracks[2].pattern[14] = true;
 
-// DOM
 const gridWrapper = document.getElementById('grid-wrapper');
 const playBtn = document.getElementById('play-btn');
 const bpmSlider = document.getElementById('bpm-slider');
@@ -702,12 +688,10 @@ const stepsSelect = document.getElementById('steps-select');
 const masterVolSlider = document.getElementById('master-vol');
 const tracksScrollArea = document.getElementById('tracks-scroll-area');
 
-// Expose variables for Firebase Module
 window.BPM = BPM;
 window.STEPS = STEPS;
 
 function init() {
-    // Language is initialized by Firebase module later, or default 'ko'
     updateLanguageUI('ko'); 
     renderGrid();
     
@@ -722,7 +706,6 @@ function init() {
     window.addEventListener('keydown', (e) => { if(e.code === 'Space') { e.preventDefault(); togglePlay(); } });
 }
 
-// Global scope update function
 window.updateStepCount = function(newSteps) {
     window.tracks.forEach(track => {
         if (newSteps > track.pattern.length) {
@@ -743,7 +726,6 @@ function renderGrid() {
         const row = document.createElement('div');
         row.className = 'grid-row';
         
-        // Control Panel
         const controls = document.createElement('div');
         controls.className = 'track-controls';
         
@@ -792,7 +774,6 @@ function renderGrid() {
 
         row.appendChild(controls);
 
-        // Grid
         const beatGrid = document.createElement('div');
         beatGrid.className = 'beat-grid';
         beatGrid.style.gridTemplateColumns = `repeat(${STEPS}, 28px)`;
@@ -800,7 +781,6 @@ function renderGrid() {
         track.pattern.forEach((isActive, stepIdx) => {
             const cell = document.createElement('div');
             renderCell(cell, isActive, track.type);
-            
             const toggle = () => {
                 track.pattern[stepIdx] = !track.pattern[stepIdx];
                 renderCell(cell, track.pattern[stepIdx], track.type);
@@ -910,7 +890,6 @@ function togglePlay() {
     }
 }
 
-// Modal Logic
 window.currentModalMode = 'save';
 window.openModal = function(mode) {
     window.currentModalMode = mode;
@@ -919,12 +898,8 @@ window.openModal = function(mode) {
     title.innerText = mode === 'save' ? getText('saveSlot') : getText('loadSlot');
     overlay.style.display = 'flex';
     
-    // Call Cloud Fetch
-    if(window.fetchSlotsMetadata) {
-        window.fetchSlotsMetadata();
-    } else {
-        document.getElementById('modal-slots').innerText = "Loading Cloud...";
-    }
+    // Call render hook
+    if(window.renderSlotButtons) window.renderSlotButtons();
 };
 
 window.closeModal = function(e) {
@@ -933,7 +908,11 @@ window.closeModal = function(e) {
     }
 };
 
-// Export
+window.changeLanguage = (lang, save = true) => {
+    updateLanguageUI(lang);
+    if (save && window.saveLangToStorage) window.saveLangToStorage(lang);
+};
+
 window.exportWav = async function() {
     if(isPlaying) togglePlay();
     const btn = document.querySelector('button[onclick="exportWav()"]');
