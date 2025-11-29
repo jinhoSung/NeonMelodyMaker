@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Melody Maker v5.1 (Fixed Save)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --neon-pink: #ff0055;
+            --neon-blue: #00ccff;
+            --neon-green: #22c55e;
+            --bg-dark: #050505;
+            --panel-bg: #111;
+        }
+
+        body { 
+            background-color: var(--bg-dark); 
+            color: white; 
+            font-family: 'Courier New', Courier, monospace;
+            user-select: none;
+            overflow: hidden;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 레이아웃 */
+        .app-header {
+            padding: 10px 20px;
+            background: rgba(17, 17, 17, 0.95);
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            z-index: 50;
+        }
+
+        .app-content {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+
+        .sequencer-container {
+            flex: 1;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid #333;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .tracks-scroll-area {
+            flex: 1;
+            overflow: auto;
+            padding: 10px;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-corner { background: #111; }
+
+        .grid-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            width: max-content;
+        }
+
+        .track-controls {
+            width: 240px;
+            min-width: 240px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-right: 12px;
+            position: sticky;
+            left: 0;
+            background: var(--panel-bg);
+            z-index: 10;
+            border-right: 1px solid #222;
+        }
+
+        .select-box {
+            background: #222; color: var(--neon-blue); border: 1px solid #444;
+            font-size: 11px; padding: 2px; border-radius: 4px; width: 80px; outline: none; cursor: pointer;
+        }
+        .note-select { width: 50px; color: #fbbf24; }
+        
+        .vol-slider {
+            width: 50px; height: 4px; -webkit-appearance: none; background: #333; border-radius: 2px;
+        }
+        .vol-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 10px; height: 10px; background: #888; border-radius: 50%; cursor: pointer;
+        }
+        .vol-slider:hover::-webkit-slider-thumb { background: #fff; }
+
+        .delete-btn { color: #555; cursor: pointer; font-size: 14px; transition: 0.2s; }
+        .delete-btn:hover { color: var(--neon-pink); }
+
+        .beat-grid { display: grid; gap: 3px; }
+
+        .beat-cell {
+            width: 28px; height: 32px;
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.05s;
+        }
+        .beat-cell:hover { border-color: #666; }
+        .beat-cell:nth-child(4n) { margin-right: 4px; }
+        .beat-cell:nth-child(16n) { margin-right: 12px; border-right: 1px solid #444; }
+
+        .beat-cell.active.kick { background-color: var(--neon-pink); box-shadow: 0 0 8px var(--neon-pink); border-color: var(--neon-pink); }
+        .beat-cell.active.snare { background-color: var(--neon-blue); box-shadow: 0 0 8px var(--neon-blue); border-color: var(--neon-blue); }
+        .beat-cell.active.hihat { background-color: #fbbf24; box-shadow: 0 0 8px #fbbf24; border-color: #fbbf24; }
+        .beat-cell.active.clap { background-color: #a855f7; box-shadow: 0 0 8px #a855f7; border-color: #a855f7; }
+        .beat-cell.active.piano { background-color: #3b82f6; box-shadow: 0 0 8px #3b82f6; border-color: #3b82f6; }
+        .beat-cell.active.guitar { background-color: var(--neon-green); box-shadow: 0 0 8px var(--neon-green); border-color: var(--neon-green); }
+        .beat-cell.active.bass { background-color: #6366f1; box-shadow: 0 0 8px #6366f1; border-color: #6366f1; }
+        .beat-cell.active.synth { background-color: #ec4899; box-shadow: 0 0 8px #ec4899; border-color: #ec4899; }
+        .beat-cell.active.marimba { background-color: #f97316; box-shadow: 0 0 8px #f97316; border-color: #f97316; }
+
+        .beat-cell.playing {
+            background-color: #fff !important; box-shadow: 0 0 15px #fff; transform: scale(1.1); z-index: 5;
+        }
+
+        .btn {
+            background: transparent; border: 1px solid var(--neon-blue); color: var(--neon-blue);
+            padding: 6px 16px; font-size: 14px; cursor: pointer; border-radius: 4px; font-weight: bold;
+            display: flex; align-items: center; gap: 5px; transition: 0.2s; white-space: nowrap;
+        }
+        .btn:hover { background: var(--neon-blue); color: black; box-shadow: 0 0 15px var(--neon-blue); }
+        .btn.active { background: var(--neon-blue); color: black; box-shadow: 0 0 15px var(--neon-blue); }
+        .btn-red { border-color: var(--neon-pink); color: var(--neon-pink); }
+        .btn-red:hover { background: var(--neon-pink); color: white; box-shadow: 0 0 15px var(--neon-pink); }
+
+        .control-group {
+            display: flex; align-items: center; gap: 8px; background: #222;
+            padding: 4px 10px; border-radius: 4px; border: 1px solid #333;
+        }
+        .control-label { font-size: 11px; color: #888; font-weight: bold; }
+
+        #modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 100; display: none;
+            justify-content: center; align-items: center;
+        }
+        .modal-box {
+            background: #111; border: 1px solid #333; padding: 20px; border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); width: 320px; text-align: center;
+        }
+        .slot-btn {
+            display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px; margin: 8px 0;
+            background: #222; border: 1px solid #444; color: #fff; cursor: pointer; font-size: 14px;
+        }
+        .slot-btn:hover { border-color: var(--neon-green); color: var(--neon-green); }
+        .slot-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .add-track-area {
+            position: sticky; left: 0; padding: 10px 0 10px 240px;
+            border-top: 1px solid #222; background: var(--panel-bg);
+        }
+        .btn-add { border-color: #555; color: #888; width: 100%; justify-content: center; }
+        .btn-add:hover { border-color: #fff; color: #fff; background: transparent; }
+
+        .lang-select {
+            background: #222; color: #aaa; border: 1px solid #444; 
+            font-size: 12px; padding: 4px; border-radius: 4px; outline: none;
+        }
+        
+        .loading-indicator {
+            width: 8px; height: 8px; background: var(--neon-blue); border-radius: 50%;
+            animation: blink 1s infinite; display: none; margin-left: 5px;
+        }
+        @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+        
+        #user-status { font-size: 10px; color: #555; margin-left: auto; margin-right: 10px; display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="app-header">
+        <div class="flex items-center gap-4">
+            <h1 class="text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-cyan-500" style="filter: drop-shadow(0 0 2px rgba(255,255,255,0.3));">
+                NEON BEAT <span class="text-xs text-gray-500">CLOUD</span>
+            </h1>
+            <div id="auth-loading" class="loading-indicator" title="Connecting..."></div>
+            <div id="user-status">ID: ...</div>
+            
+            <select id="lang-select" class="lang-select" onchange="changeLanguage(this.value)">
+                <option value="ko">🇰🇷 한국어</option>
+                <option value="en">🇺🇸 English</option>
+                <option value="ja">🇯🇵 日本語</option>
+                <option value="zh">🇨🇳 中文</option>
+                <option value="es">🇪🇸 Español</option>
+                <option value="fr">🇫🇷 Français</option>
+                <option value="de">🇩🇪 Deutsch</option>
+            </select>
+            
+            <div class="control-group hidden md:flex">
+                <span class="control-label" data-i18n="master">MASTER</span>
+                <input type="range" id="master-vol" min="0" max="1" step="0.1" value="0.8" class="vol-slider w-20">
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap justify-end">
+            <button class="btn" id="play-btn">▶ PLAY</button>
+            <button class="btn btn-red" onclick="clearAll()" data-i18n="clear">CLEAR</button>
+            
+            <div class="control-group">
+                <span class="control-label" data-i18n="bpm">BPM</span>
+                <input type="range" id="bpm-slider" min="60" max="240" value="120" class="vol-slider w-16">
+                <span id="bpm-display" class="font-mono text-xs w-6 text-right text-cyan-400">120</span>
+            </div>
+            
+            <div class="control-group">
+                <span class="control-label" data-i18n="len">LEN</span>
+                <select id="steps-select" class="bg-black text-white text-xs outline-none border border-gray-700 rounded px-1">
+                    <option value="16">16</option>
+                    <option value="32">32</option>
+                    <option value="64">64</option>
+                </select>
+            </div>
+
+            <div class="flex gap-1 ml-2">
+                <button class="btn" onclick="openModal('save')" data-i18n="save">SAVE</button>
+                <button class="btn" onclick="openModal('load')" data-i18n="load">LOAD</button>
+                <button class="btn" onclick="exportWav()" data-i18n="wav">WAV ⇩</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main class="app-content">
+        <div class="sequencer-container">
+            <div class="tracks-scroll-area" id="tracks-scroll-area">
+                <div id="grid-wrapper"></div>
+                <div class="add-track-area">
+                    <button class="btn btn-add" onclick="addTrack()" data-i18n="addTrack">+ ADD TRACK</button>
+                </div>
+            </div>
+        </div>
+        <p class="text-center text-gray-600 text-[10px] mt-1" id="help-text">...</p>
+    </main>
+
+    <!-- Modal -->
+    <div id="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-box">
+            <h2 id="modal-title" class="text-xl font-bold mb-4 text-cyan-400">SAVE SLOT</h2>
+            <div id="slot-loader" class="text-gray-500 text-sm mb-4" style="display:none;">Connecting to Cloud...</div>
+            <div id="modal-slots"></div>
+            <button class="btn btn-red mt-4 w-full justify-center" onclick="closeModal()" data-i18n="close">CLOSE</button>
+        </div>
+    </div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+/**
+ * ==========================================
+ * Firebase Setup & Auth
+ * ==========================================
+ */
+const firebaseConfig = JSON.parse(__firebase_config);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app';
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let currentUser = null;
+
+// Auth Init - Fix for persistency
+async function initAuth() {
+    const loader = document.getElementById('auth-loading');
+    loader.style.display = 'block';
+    
+    try {
+        // Try Custom Token first (Persistent Identity)
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+            // Fallback (Session Identity)
+            await signInAnonymously(auth);
+        }
+    } catch (error) {
+        console.error("Auth Error:", error);
+        alert("Cloud connection failed. Saving might not work.");
+    }
+}
+
+onAuthStateChanged(auth, async (user) => {
+    document.getElementById('auth-loading').style.display = 'none';
+    if (user) {
+        currentUser = user;
+        const status = document.getElementById('user-status');
+        status.style.display = 'block';
+        status.innerText = `ID: ${user.uid.substring(0, 6)}...`;
+        
+        // 로그인 성공 후 언어 설정 불러오기
+        loadSettings();
+    }
+});
+
+// Load User Settings (Language)
+async function loadSettings() {
+    if (!currentUser) return;
+    try {
+        const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'general');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.language && TRANSLATIONS[data.language]) {
+                window.changeLanguage(data.language, false); // false = don't save again (prevent loop)
+            }
+        }
+    } catch (e) { console.log("Settings load error", e); }
+}
+
+// Save User Settings
+async function saveSettings(lang) {
+    if (!currentUser) return;
+    try {
+        const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'general');
+        await setDoc(docRef, { language: lang }, { merge: true });
+    } catch (e) { console.log("Settings save error", e); }
+}
+
+// Global functions for HTML access
+window.saveSlotToCloud = async (slotId) => {
+    if (!currentUser) {
+        alert("Not connected to cloud yet. Please wait.");
+        return;
+    }
+    
+    const data = {
+        date: new Date().toLocaleString(),
+        bpm: BPM,
+        steps: STEPS,
+        tracks: tracks,
+        timestamp: Date.now()
+    };
+
+    const btn = document.getElementById(`slot-btn-${slotId}`);
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<span class="text-cyan-400">SAVING...</span>`;
+
+    try {
+        const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'slots', `slot_${slotId}`);
+        await setDoc(docRef, data);
+        alert(getText('saved') + " " + slotId);
+        window.closeModal();
+    } catch (e) {
+        alert("Save failed: " + e.message);
+        btn.innerHTML = originalText;
+    }
+};
+
+window.loadSlotFromCloud = async (slotId) => {
+    if (!currentUser) {
+        alert("Not connected to cloud yet. Please wait.");
+        return;
+    }
+
+    const btn = document.getElementById(`slot-btn-${slotId}`);
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<span class="text-cyan-400">LOADING...</span>`;
+
+    try {
+        const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'slots', `slot_${slotId}`);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            BPM = data.bpm;
+            document.getElementById('bpm-slider').value = BPM; 
+            document.getElementById('bpm-display').innerText = BPM;
+            tracks = data.tracks;
+            
+            // 전역 갱신 함수 호출
+            window.updateStepCount(data.steps);
+            document.getElementById('steps-select').value = data.steps;
+            
+            alert(getText('loaded') + " " + slotId);
+            window.closeModal();
+        } else {
+            alert(getText('slotEmpty'));
+            btn.innerHTML = originalText;
+        }
+    } catch (e) {
+        alert("Load failed: " + e.message);
+        btn.innerHTML = originalText;
+    }
+};
+
+window.fetchSlotsMetadata = async () => {
+    const container = document.getElementById('modal-slots');
+    const loader = document.getElementById('slot-loader');
+    container.innerHTML = '';
+    
+    if (!currentUser) {
+        loader.style.display = 'block';
+        loader.innerText = "Waiting for connection...";
+        // Auth가 완료될 때까지 잠시 대기하거나 재시도하지 않고 사용자에게 알림
+        return; 
+    }
+    
+    loader.style.display = 'block';
+    loader.innerText = "Checking Cloud Storage...";
+
+    for (let i = 1; i <= 3; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'slot-btn';
+        btn.id = `slot-btn-${i}`;
+        btn.innerHTML = `<span class="font-bold">SLOT ${i}</span> <span class="text-gray-500 text-xs">...</span>`;
+        
+        btn.onclick = () => {
+            if (window.currentModalMode === 'save') window.saveSlotToCloud(i);
+            else window.loadSlotFromCloud(i);
+        };
+        container.appendChild(btn);
+
+        // 비동기로 데이터 존재 여부 확인
+        try {
+            const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'slots', `slot_${i}`);
+            getDoc(docRef).then(snap => {
+                const dateStr = snap.exists() ? snap.data().date : getText('slotEmpty');
+                const colorClass = snap.exists() ? "text-cyan-300" : "text-gray-600";
+                btn.innerHTML = `<span class="font-bold">SLOT ${i}</span> <span class="${colorClass} text-xs">${dateStr}</span>`;
+            });
+        } catch(e) {
+            console.error("Slot fetch error", e);
+        }
+    }
+    loader.style.display = 'none';
+};
+
+// Expose hook
+window.changeLanguage = (lang, save = true) => {
+    updateLanguageUI(lang);
+    if (save) saveSettings(lang);
+};
+
+initAuth();
+
+</script>
+
+<script>
+/**
+ * ==========================================
+ * Core Logic (Variables & UI)
+ * ==========================================
+ */
+const TRANSLATIONS = {
+    ko: {
+        master: "마스터", play: "▶ 재생", stop: "■ 정지", clear: "초기화", bpm: "속도", len: "길이",
+        save: "저장", load: "불러오기", wav: "WAV ⇩", addTrack: "+ 트랙 추가", saveSlot: "저장 슬롯",
+        loadSlot: "불러오기 슬롯", close: "닫기", slotEmpty: "비어있음", saved: "저장됨: 슬롯",
+        loaded: "불러옴: 슬롯", rendering: "변환 중...",
+        help: "PC: 스페이스바로 재생/정지 • 모바일: 터치로 재생 • 클라우드에 자동 연결됩니다.",
+        inst_kick: "킥", inst_snare: "스네어", inst_hihat: "하이햇", inst_clap: "박수",
+        inst_piano: "피아노", inst_guitar: "기타", inst_bass: "베이스", inst_synth: "신디", inst_marimba: "마림바"
+    },
+    en: {
+        master: "MASTER", play: "▶ PLAY", stop: "■ STOP", clear: "CLEAR", bpm: "BPM", len: "LEN",
+        save: "SAVE", load: "LOAD", wav: "WAV ⇩", addTrack: "+ ADD TRACK", saveSlot: "SAVE SLOT",
+        loadSlot: "LOAD FROM SLOT", close: "CLOSE", slotEmpty: "Empty", saved: "Saved Slot",
+        loaded: "Loaded Slot", rendering: "RENDERING...",
+        help: "PC: Space to Play/Stop • Mobile: Tap to Play • Auto-connected to Cloud.",
+        inst_kick: "Kick", inst_snare: "Snare", inst_hihat: "HiHat", inst_clap: "Clap",
+        inst_piano: "Piano", inst_guitar: "Guitar", inst_bass: "Bass", inst_synth: "Synth", inst_marimba: "Marimba"
+    },
+    ja: {
+        master: "マスター", play: "▶ 再生", stop: "■ 停止", clear: "クリア", bpm: "テンポ", len: "長さ",
+        save: "保存", load: "読込", wav: "WAV ⇩", addTrack: "+ トラック追加", saveSlot: "スロットに保存",
+        loadSlot: "スロットから読込", close: "閉じる", slotEmpty: "空き", saved: "保存しました",
+        loaded: "読み込みました", rendering: "レンダリング中...",
+        help: "PC: スペースキーで再生/停止 • モバイル: タップして再生",
+        inst_kick: "キック", inst_snare: "スネア", inst_hihat: "ハイハット", inst_clap: "クラップ",
+        inst_piano: "ピアノ", inst_guitar: "ギター", inst_bass: "ベース", inst_synth: "シンセ", inst_marimba: "マリンバ"
+    },
+    zh: {
+        master: "主音量", play: "▶ 播放", stop: "■ 停止", clear: "清除", bpm: "速度", len: "长度",
+        save: "保存", load: "加载", wav: "WAV ⇩", addTrack: "+ 添加轨道", saveSlot: "保存槽",
+        loadSlot: "加载槽", close: "关闭", slotEmpty: "空", saved: "已保存",
+        loaded: "已加载", rendering: "渲染中...",
+        help: "PC: 空格键播放/停止 • 手机: 点击播放",
+        inst_kick: "底鼓", inst_snare: "军鼓", inst_hihat: "镲片", inst_clap: "拍手",
+        inst_piano: "钢琴", inst_guitar: "吉他", inst_bass: "贝斯", inst_synth: "合成器", inst_marimba: "马林巴"
+    },
+    es: {
+        master: "MAESTRO", play: "▶ REPRO", stop: "■ PARAR", clear: "LIMPIAR", bpm: "BPM", len: "LONG",
+        save: "GUARDAR", load: "CARGAR", wav: "WAV ⇩", addTrack: "+ AÑADIR PISTA", saveSlot: "GUARDAR",
+        loadSlot: "CARGAR", close: "CERRAR", slotEmpty: "Vacío", saved: "Guardado",
+        loaded: "Cargado", rendering: "RENDERIZANDO...",
+        help: "PC: Espacio para Repro/Parar • Móvil: Toque para Repro",
+        inst_kick: "Bombo", inst_snare: "Caja", inst_hihat: "HiHat", inst_clap: "Aplauso",
+        inst_piano: "Piano", inst_guitar: "Guitarra", inst_bass: "Bajo", inst_synth: "Sinte", inst_marimba: "Marimba"
+    },
+    fr: {
+        master: "MASTER", play: "▶ LECTURE", stop: "■ ARRÊT", clear: "EFFACER", bpm: "BPM", len: "LONG",
+        save: "SAUVER", load: "CHARGER", wav: "WAV ⇩", addTrack: "+ AJOUTER PISTE", saveSlot: "SAUVEGARDE",
+        loadSlot: "CHARGER", close: "FERMER", slotEmpty: "Vide", saved: "Sauvegardé",
+        loaded: "Chargé", rendering: "RENDU EN COURS...",
+        help: "PC : Espace pour Lecture/Arrêt • Mobile : Appuyez pour Lecture",
+        inst_kick: "Kick", inst_snare: "Snare", inst_hihat: "HiHat", inst_clap: "Clap",
+        inst_piano: "Piano", inst_guitar: "Guitare", inst_bass: "Basse", inst_synth: "Synthé", inst_marimba: "Marimba"
+    },
+    de: {
+        master: "MASTER", play: "▶ START", stop: "■ STOPP", clear: "LÖSCHEN", bpm: "BPM", len: "LÄNGE",
+        save: "SPEICHERN", load: "LADEN", wav: "WAV ⇩", addTrack: "+ SPUR HINZUFÜGEN", saveSlot: "SPEICHERPLATZ",
+        loadSlot: "LADEN", close: "SCHLIEßEN", slotEmpty: "Leer", saved: "Gespeichert",
+        loaded: "Geladen", rendering: "RENDERN...",
+        help: "PC: Leertaste für Start/Stopp • Mobil: Tippen für Start",
+        inst_kick: "Kick", inst_snare: "Snare", inst_hihat: "HiHat", inst_clap: "Klatschen",
+        inst_piano: "Klavier", inst_guitar: "Gitarre", inst_bass: "Bass", inst_synth: "Synth", inst_marimba: "Marimba"
+    }
+};
+
+const NOTE_MAP_KO = { 'C': '도', 'D': '레', 'E': '미', 'F': '파', 'G': '솔', 'A': '라', 'B': '시' };
+let currentLang = 'ko';
+
+window.currentLang = currentLang;
+
+function updateLanguageUI(lang) {
+    currentLang = lang;
+    window.currentLang = lang;
+    document.getElementById('lang-select').value = lang;
+    
+    const t = TRANSLATIONS[lang];
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (t[key]) el.innerText = t[key];
+    });
+    
+    updatePlayButtonText();
+    document.getElementById('help-text').innerText = t.help;
+    renderGrid(); 
+}
+
+function getText(key) { return TRANSLATIONS[currentLang][key] || key; }
+function getNoteName(note) {
+    if (currentLang !== 'ko') return note;
+    const key = note.charAt(0);
+    const octave = note.slice(1);
+    return (NOTE_MAP_KO[key] || key) + octave;
+}
+function updatePlayButtonText() {
+    const btn = document.getElementById('play-btn');
+    const t = TRANSLATIONS[currentLang];
+    btn.innerHTML = isPlaying ? t.stop : t.play;
+}
+
+/**
+ * ==========================================
+ * Audio Engine
+ * ==========================================
+ */
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioContext();
+const masterGain = audioCtx.createGain();
+masterGain.gain.value = 0.8;
+const compressor = audioCtx.createDynamicsCompressor();
+compressor.threshold.setValueAtTime(-24, audioCtx.currentTime);
+compressor.ratio.setValueAtTime(12, audioCtx.currentTime);
+masterGain.connect(compressor);
+compressor.connect(audioCtx.destination);
+
+const NOTE_FREQS = {
+    'C2': 65.41, 'D2': 73.42, 'E2': 82.41, 'G2': 98.00, 'A2': 110.00,
+    'C3': 130.81, 'D3': 146.83, 'E3': 164.81, 'F3': 174.61, 'G3': 196.00, 'A3': 220.00, 'B3': 246.94,
+    'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00, 'B4': 493.88,
+    'C5': 523.25, 'E5': 659.25, 'G5': 783.99, 'A5': 880.00
+};
+
+const Sounds = {
+    play: (type, context, destination, time, note, volume) => {
+        const vol = (volume !== undefined ? volume : 1.0);
+        const methods = {
+            'Kick': () => {
+                const osc = context.createOscillator(); const g = context.createGain();
+                osc.frequency.setValueAtTime(150, time); osc.frequency.exponentialRampToValueAtTime(0.001, time + 0.5);
+                g.gain.setValueAtTime(1 * vol, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
+                osc.connect(g); g.connect(destination); osc.start(time); osc.stop(time + 0.5);
+            },
+            'Snare': () => {
+                const osc = context.createOscillator(); const g = context.createGain();
+                osc.type = 'triangle'; g.gain.setValueAtTime(0.7 * vol, time); g.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+                osc.connect(g); g.connect(destination); osc.start(time); osc.stop(time + 0.1);
+                const bSize = context.sampleRate * 0.1; const b = context.createBuffer(1, bSize, context.sampleRate);
+                const d = b.getChannelData(0); for(let i=0;i<bSize;i++) d[i] = Math.random()*2-1;
+                const noise = context.createBufferSource(); noise.buffer = b; const ng = context.createGain();
+                ng.gain.setValueAtTime(0.4 * vol, time); ng.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+                noise.connect(ng); ng.connect(destination); noise.start(time);
+            },
+            'HiHat': () => {
+                const osc = context.createOscillator(); const g = context.createGain();
+                osc.type = 'square'; osc.frequency.setValueAtTime(1200, time);
+                const f = context.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 10000;
+                g.gain.setValueAtTime(0.2 * vol, time); g.gain.exponentialRampToValueAtTime(0.01, time + 0.05);
+                osc.connect(f); f.connect(g); g.connect(destination); osc.start(time); osc.stop(time + 0.05);
+            },
+            'Clap': () => {
+                const bSize = context.sampleRate * 0.2; const b = context.createBuffer(1, bSize, context.sampleRate);
+                const d = b.getChannelData(0); for(let i=0;i<bSize;i++) d[i] = (Math.random()*2-1)*0.5;
+                const n = context.createBufferSource(); n.buffer = b; const g = context.createGain();
+                g.gain.setValueAtTime(0, time); g.gain.linearRampToValueAtTime(0.5 * vol, time + 0.01);
+                g.gain.exponentialRampToValueAtTime(0.01, time + 0.15); n.connect(g); g.connect(destination); n.start(time);
+            },
+            'Piano': () => {
+                const freq = NOTE_FREQS[note] || 440; const osc = context.createOscillator();
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, time);
+                const g = context.createGain(); g.gain.setValueAtTime(0, time);
+                g.gain.linearRampToValueAtTime(0.5 * vol, time + 0.02); g.gain.exponentialRampToValueAtTime(0.001, time + 1.2);
+                osc.connect(g); g.connect(destination); osc.start(time); osc.stop(time + 1.2);
+            },
+            'Guitar': () => {
+                const freq = NOTE_FREQS[note] || 440; const osc = context.createOscillator();
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(freq, time);
+                const f = context.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(3000, time); f.frequency.exponentialRampToValueAtTime(100, time + 0.2);
+                const g = context.createGain(); g.gain.setValueAtTime(0, time);
+                g.gain.linearRampToValueAtTime(0.4 * vol, time + 0.01); g.gain.exponentialRampToValueAtTime(0.001, time + 0.8);
+                osc.connect(f); f.connect(g); g.connect(destination); osc.start(time); osc.stop(time + 0.8);
+            },
+            'Bass': () => {
+                const freq = NOTE_FREQS[note] || 220; const osc = context.createOscillator();
+                osc.type = 'square'; osc.frequency.setValueAtTime(freq, time);
+                const f = context.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(1000, time); f.frequency.exponentialRampToValueAtTime(50, time + 0.4);
+                const g = context.createGain(); g.gain.setValueAtTime(0.9 * vol, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
+                osc.connect(f); f.connect(g); g.connect(destination); osc.start(time); osc.stop(time + 0.5);
+            },
+            'Synth': () => {
+                const freq = NOTE_FREQS[note] || 440; const osc = context.createOscillator();
+                osc.type = 'square'; osc.frequency.setValueAtTime(freq, time);
+                const f = context.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(1000, time); f.frequency.linearRampToValueAtTime(8000, time + 0.1);
+                const g = context.createGain(); g.gain.setValueAtTime(0.3 * vol, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
+                osc.connect(f); f.connect(g); g.connect(destination); osc.start(time); osc.stop(time + 0.3);
+            },
+            'Marimba': () => {
+                const freq = NOTE_FREQS[note] || 440; const osc = context.createOscillator();
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, time);
+                const f = context.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(freq * 4, time);
+                const g = context.createGain(); g.gain.setValueAtTime(0, time);
+                g.gain.linearRampToValueAtTime(0.8 * vol, time + 0.01); g.gain.exponentialRampToValueAtTime(0.001, time + 0.4);
+                osc.connect(f); f.connect(g); g.connect(destination); osc.start(time); osc.stop(time + 0.4);
+            }
+        };
+        if (methods[type]) methods[type]();
+    }
+};
+
+/**
+ * ==========================================
+ * App State
+ * ==========================================
+ */
+let STEPS = 16;
+let BPM = 120;
+let isPlaying = false;
+let currentStep = 0;
+let nextNoteTime = 0.0;
+let timerID;
+let lookahead = 25.0;
+let scheduleAheadTime = 0.1;
+
+const INST_TYPES = ['Kick', 'Snare', 'HiHat', 'Clap', 'Piano', 'Guitar', 'Bass', 'Synth', 'Marimba'];
+const MELODY_INSTS = ['Piano', 'Guitar', 'Bass', 'Synth', 'Marimba'];
+const NOTE_KEYS = Object.keys(NOTE_FREQS);
+
+// Tracks data will be accessible globally via window.tracks for firebase saving
+window.tracks = [
+    { type: 'Kick', note: '-', vol: 1.0, pattern: Array(16).fill(false) },
+    { type: 'Snare', note: '-', vol: 0.8, pattern: Array(16).fill(false) },
+    { type: 'HiHat', note: '-', vol: 0.7, pattern: Array(16).fill(false) },
+    { type: 'Bass', note: 'C3', vol: 0.9, pattern: Array(16).fill(false) }
+];
+window.tracks[0].pattern[0] = true; window.tracks[0].pattern[8] = true;
+window.tracks[2].pattern[2] = true; window.tracks[2].pattern[6] = true;
+window.tracks[2].pattern[10] = true; window.tracks[2].pattern[14] = true;
+
+// DOM
+const gridWrapper = document.getElementById('grid-wrapper');
+const playBtn = document.getElementById('play-btn');
+const bpmSlider = document.getElementById('bpm-slider');
+const bpmDisplay = document.getElementById('bpm-display');
+const stepsSelect = document.getElementById('steps-select');
+const masterVolSlider = document.getElementById('master-vol');
+const tracksScrollArea = document.getElementById('tracks-scroll-area');
+
+// Expose variables for Firebase Module
+window.BPM = BPM;
+window.STEPS = STEPS;
+
+function init() {
+    // Language is initialized by Firebase module later, or default 'ko'
+    updateLanguageUI('ko'); 
+    renderGrid();
+    
+    bpmSlider.oninput = (e) => { 
+        BPM = parseInt(e.target.value); 
+        window.BPM = BPM; 
+        bpmDisplay.innerText = BPM; 
+    };
+    stepsSelect.onchange = (e) => updateStepCount(parseInt(e.target.value));
+    masterVolSlider.oninput = (e) => { masterGain.gain.value = parseFloat(e.target.value); };
+    playBtn.onclick = togglePlay;
+    window.addEventListener('keydown', (e) => { if(e.code === 'Space') { e.preventDefault(); togglePlay(); } });
+}
+
+// Global scope update function
+window.updateStepCount = function(newSteps) {
+    window.tracks.forEach(track => {
+        if (newSteps > track.pattern.length) {
+            track.pattern = track.pattern.concat(Array(newSteps - track.pattern.length).fill(false));
+        } else {
+            track.pattern = track.pattern.slice(0, newSteps);
+        }
+    });
+    STEPS = newSteps;
+    window.STEPS = STEPS;
+    if (currentStep >= STEPS) currentStep = 0;
+    renderGrid();
+};
+
+function renderGrid() {
+    gridWrapper.innerHTML = '';
+    window.tracks.forEach((track, idx) => {
+        const row = document.createElement('div');
+        row.className = 'grid-row';
+        
+        // Control Panel
+        const controls = document.createElement('div');
+        controls.className = 'track-controls';
+        
+        const delBtn = document.createElement('span');
+        delBtn.innerHTML = '×';
+        delBtn.className = 'delete-btn';
+        delBtn.onclick = () => removeTrack(idx);
+        controls.appendChild(delBtn);
+
+        const instSelect = document.createElement('select');
+        instSelect.className = 'select-box';
+        INST_TYPES.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t; 
+            opt.innerText = getText('inst_' + t.toLowerCase());
+            if(t === track.type) opt.selected = true;
+            instSelect.appendChild(opt);
+        });
+        instSelect.onchange = (e) => { track.type = e.target.value; renderGrid(); };
+        controls.appendChild(instSelect);
+
+        if(MELODY_INSTS.includes(track.type)) {
+            const noteSelect = document.createElement('select');
+            noteSelect.className = 'select-box note-select';
+            NOTE_KEYS.forEach(n => {
+                const opt = document.createElement('option');
+                opt.value = n; 
+                opt.innerText = getNoteName(n);
+                if(n === track.note) opt.selected = true;
+                noteSelect.appendChild(opt);
+            });
+            noteSelect.onchange = (e) => { track.note = e.target.value; };
+            controls.appendChild(noteSelect);
+        } else {
+            const spacer = document.createElement('div');
+            spacer.style.width = '45px';
+            controls.appendChild(spacer);
+        }
+
+        const volSlider = document.createElement('input');
+        volSlider.type = 'range'; volSlider.min = 0; volSlider.max = 1; volSlider.step = 0.1;
+        volSlider.value = track.vol || 0.8;
+        volSlider.className = 'vol-slider';
+        volSlider.oninput = (e) => { track.vol = parseFloat(e.target.value); };
+        controls.appendChild(volSlider);
+
+        row.appendChild(controls);
+
+        // Grid
+        const beatGrid = document.createElement('div');
+        beatGrid.className = 'beat-grid';
+        beatGrid.style.gridTemplateColumns = `repeat(${STEPS}, 28px)`;
+        
+        track.pattern.forEach((isActive, stepIdx) => {
+            const cell = document.createElement('div');
+            renderCell(cell, isActive, track.type);
+            
+            const toggle = () => {
+                track.pattern[stepIdx] = !track.pattern[stepIdx];
+                renderCell(cell, track.pattern[stepIdx], track.type);
+                if(track.pattern[stepIdx] && !isPlaying) {
+                    if(audioCtx.state === 'suspended') audioCtx.resume();
+                    Sounds.play(track.type, audioCtx, masterGain, audioCtx.currentTime, track.note, track.vol);
+                }
+            };
+            cell.onmousedown = toggle;
+            cell.onmouseenter = (e) => { if(e.buttons === 1) toggle(); };
+            beatGrid.appendChild(cell);
+        });
+
+        row.appendChild(beatGrid);
+        gridWrapper.appendChild(row);
+    });
+}
+
+function renderCell(el, active, type) {
+    if(active) {
+        el.className = `beat-cell active ${type.toLowerCase()}`;
+    } else {
+        el.className = 'beat-cell';
+    }
+}
+
+window.addTrack = function() {
+    window.tracks.push({ type: 'Synth', note: 'C4', vol: 0.8, pattern: Array(STEPS).fill(false) });
+    renderGrid();
+    setTimeout(() => { tracksScrollArea.scrollTop = tracksScrollArea.scrollHeight; }, 10);
+};
+
+function removeTrack(idx) {
+    if(window.tracks.length <= 1) return;
+    window.tracks.splice(idx, 1);
+    renderGrid();
+}
+
+window.clearAll = function() {
+    window.tracks.forEach(t => t.pattern.fill(false));
+    renderGrid();
+};
+
+function nextNote() {
+    const secondsPerBeat = 60.0 / BPM;
+    nextNoteTime += 0.25 * secondsPerBeat; 
+    currentStep++;
+    if (currentStep === STEPS) currentStep = 0;
+}
+
+function scheduleNote(stepNumber, time) {
+    setTimeout(() => updateVisuals(stepNumber), (time - audioCtx.currentTime) * 1000);
+    window.tracks.forEach(track => {
+        if (track.pattern[stepNumber]) {
+            Sounds.play(track.type, audioCtx, masterGain, time, track.note, track.vol);
+        }
+    });
+}
+
+function scheduler() {
+    while (nextNoteTime < audioCtx.currentTime + scheduleAheadTime) {
+        scheduleNote(currentStep, nextNoteTime);
+        nextNote();
+    }
+    timerID = setTimeout(scheduler, lookahead);
+}
+
+function updateVisuals(step) {
+    const prevs = document.querySelectorAll('.beat-cell.playing');
+    prevs.forEach(el => el.classList.remove('playing'));
+    window.tracks.forEach((_, idx) => {
+        const row = gridWrapper.children[idx];
+        if(!row) return;
+        const grid = row.querySelector('.beat-grid');
+        if(grid && grid.children[step]) {
+            grid.children[step].classList.add('playing');
+        }
+    });
+    if(step % 4 === 0) {
+        const row = gridWrapper.children[0];
+        if(row) {
+            const grid = row.querySelector('.beat-grid');
+            const cell = grid.children[step];
+            const area = tracksScrollArea;
+            if(cell.offsetLeft > area.scrollLeft + area.clientWidth - 50) {
+                 area.scrollLeft = cell.offsetLeft - 250;
+            } else if(cell.offsetLeft < area.scrollLeft + 240) {
+                 area.scrollLeft = cell.offsetLeft - 240;
+            }
+        }
+    }
+}
+
+function togglePlay() {
+    isPlaying = !isPlaying;
+    updatePlayButtonText(); 
+    if (isPlaying) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        currentStep = 0;
+        nextNoteTime = audioCtx.currentTime;
+        scheduler();
+        playBtn.classList.add('active');
+    } else {
+        clearTimeout(timerID);
+        playBtn.classList.remove('active');
+        document.querySelectorAll('.beat-cell.playing').forEach(el => el.classList.remove('playing'));
+    }
+}
+
+// Modal Logic
+window.currentModalMode = 'save';
+window.openModal = function(mode) {
+    window.currentModalMode = mode;
+    const overlay = document.getElementById('modal-overlay');
+    const title = document.getElementById('modal-title');
+    title.innerText = mode === 'save' ? getText('saveSlot') : getText('loadSlot');
+    overlay.style.display = 'flex';
+    
+    // Call Cloud Fetch
+    if(window.fetchSlotsMetadata) {
+        window.fetchSlotsMetadata();
+    } else {
+        document.getElementById('modal-slots').innerText = "Loading Cloud...";
+    }
+};
+
+window.closeModal = function(e) {
+    if(!e || e.target.id === 'modal-overlay' || e.target.innerText === getText('close')) {
+        document.getElementById('modal-overlay').style.display = 'none';
+    }
+};
+
+// Export
+window.exportWav = async function() {
+    if(isPlaying) togglePlay();
+    const btn = document.querySelector('button[onclick="exportWav()"]');
+    const originalText = btn.innerText;
+    btn.innerText = getText('rendering');
+    
+    const duration = (60 / BPM) * (STEPS / 4); 
+    const offlineCtx = new OfflineAudioContext(1, 44100 * duration, 44100);
+    
+    for(let s=0; s<STEPS; s++) {
+        const time = s * (60 / BPM) * 0.25;
+        window.tracks.forEach(track => {
+            if(track.pattern[s]) {
+                Sounds.play(track.type, offlineCtx, offlineCtx.destination, time, track.note, track.vol);
+            }
+        });
+    }
+
+    const buffer = await offlineCtx.startRendering();
+    const wav = bufferToWave(buffer, duration * 44100);
+    const blob = new Blob([wav], { type: "audio/wav" });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `neon_beat_${Date.now()}.wav`;
+    a.click();
+    
+    btn.innerText = originalText;
+};
+
+function bufferToWave(abuffer, len) {
+    const numOfChan = abuffer.numberOfChannels;
+    const length = len * numOfChan * 2 + 44;
+    const buffer = new ArrayBuffer(length);
+    const view = new DataView(buffer);
+    const channels = [];
+    let i, sample; 
+    let offset = 0, pos = 0;
+
+    setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157); setUint32(0x20746d66); setUint32(16); setUint16(1); 
+    setUint16(numOfChan); setUint32(abuffer.sampleRate); setUint32(abuffer.sampleRate * 2 * numOfChan); setUint16(numOfChan * 2); setUint16(16); setUint32(0x61746164); setUint32(length - pos - 4); 
+
+    for(i = 0; i < abuffer.numberOfChannels; i++) channels.push(abuffer.getChannelData(i));
+
+    while(pos < length) {
+        for(i = 0; i < numOfChan; i++) {
+            sample = Math.max(-1, Math.min(1, channels[i][offset])); 
+            sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0; 
+            view.setInt16(pos, sample, true); pos += 2;
+        }
+        offset++;
+    }
+    return buffer;
+    function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
+    function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
+}
+
+init();
+</script>
+</body>
+</html>
