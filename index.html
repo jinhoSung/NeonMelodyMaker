@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon Melody Maker v5.2 (Hybrid)</title>
+    <title>Neon Melody Maker v9.0 (Real Waveform)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
             --neon-pink: #ff0055;
             --neon-blue: #00ccff;
             --neon-green: #22c55e;
+            --neon-purple: #a855f7;
             --bg-dark: #050505;
             --panel-bg: #111;
         }
@@ -111,31 +112,77 @@
 
         .beat-grid { display: grid; gap: 3px; }
 
+        /* --- ✨ Visual Effects CSS --- */
+        
+        @keyframes pop-effect {
+            0% { transform: scale(1); }
+            40% { transform: scale(1.3); filter: brightness(1.5); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shockwave {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; border-width: 2px; }
+            100% { transform: translate(-50%, -50%) scale(3); opacity: 0; border-width: 0px; }
+        }
+
         .beat-cell {
             width: 28px; height: 32px;
             background-color: #1a1a1a;
             border: 1px solid #333;
-            border-radius: 3px;
+            border-radius: 4px;
             cursor: pointer;
-            transition: all 0.05s;
+            position: relative;
+            transition: background-color 0.1s, border-color 0.1s, box-shadow 0.1s;
         }
         .beat-cell:hover { border-color: #666; }
         .beat-cell:nth-child(4n) { margin-right: 4px; }
         .beat-cell:nth-child(16n) { margin-right: 12px; border-right: 1px solid #444; }
 
-        .beat-cell.active.kick { background-color: var(--neon-pink); box-shadow: 0 0 8px var(--neon-pink); border-color: var(--neon-pink); }
-        .beat-cell.active.snare { background-color: var(--neon-blue); box-shadow: 0 0 8px var(--neon-blue); border-color: var(--neon-blue); }
-        .beat-cell.active.hihat { background-color: #fbbf24; box-shadow: 0 0 8px #fbbf24; border-color: #fbbf24; }
-        .beat-cell.active.clap { background-color: #a855f7; box-shadow: 0 0 8px #a855f7; border-color: #a855f7; }
-        .beat-cell.active.piano { background-color: #3b82f6; box-shadow: 0 0 8px #3b82f6; border-color: #3b82f6; }
-        .beat-cell.active.guitar { background-color: var(--neon-green); box-shadow: 0 0 8px var(--neon-green); border-color: var(--neon-green); }
-        .beat-cell.active.bass { background-color: #6366f1; box-shadow: 0 0 8px #6366f1; border-color: #6366f1; }
-        .beat-cell.active.synth { background-color: #ec4899; box-shadow: 0 0 8px #ec4899; border-color: #ec4899; }
-        .beat-cell.active.marimba { background-color: #f97316; box-shadow: 0 0 8px #f97316; border-color: #f97316; }
+        /* Instrument Colors */
+        .beat-cell.active.kick { background-color: var(--neon-pink); box-shadow: 0 0 5px var(--neon-pink); border-color: var(--neon-pink); color: var(--neon-pink); }
+        .beat-cell.active.snare { background-color: var(--neon-blue); box-shadow: 0 0 5px var(--neon-blue); border-color: var(--neon-blue); color: var(--neon-blue); }
+        .beat-cell.active.hihat { background-color: #fbbf24; box-shadow: 0 0 5px #fbbf24; border-color: #fbbf24; color: #fbbf24; }
+        .beat-cell.active.clap { background-color: #a855f7; box-shadow: 0 0 5px #a855f7; border-color: #a855f7; color: #a855f7; }
+        .beat-cell.active.tom { background-color: #8b5cf6; box-shadow: 0 0 5px #8b5cf6; border-color: #8b5cf6; color: #8b5cf6; } 
+        .beat-cell.active.crash { background-color: #e5e7eb; box-shadow: 0 0 5px #e5e7eb; border-color: #e5e7eb; color: #e5e7eb; } 
 
+        .beat-cell.active.piano { background-color: #3b82f6; box-shadow: 0 0 5px #3b82f6; border-color: #3b82f6; color: #3b82f6; }
+        .beat-cell.active.guitar { background-color: var(--neon-green); box-shadow: 0 0 5px var(--neon-green); border-color: var(--neon-green); color: var(--neon-green); }
+        .beat-cell.active.bass { background-color: #6366f1; box-shadow: 0 0 5px #6366f1; border-color: #6366f1; color: #6366f1; }
+        .beat-cell.active.synth { background-color: #ec4899; box-shadow: 0 0 5px #ec4899; border-color: #ec4899; color: #ec4899; }
+        .beat-cell.active.marimba { background-color: #f97316; box-shadow: 0 0 5px #f97316; border-color: #f97316; color: #f97316; }
+        
+        .beat-cell.active.saxophone { background-color: #eab308; box-shadow: 0 0 5px #eab308; border-color: #eab308; color: #eab308; }
+        .beat-cell.active.trumpet { background-color: #f59e0b; box-shadow: 0 0 5px #f59e0b; border-color: #f59e0b; color: #f59e0b; }
+        .beat-cell.active.flute { background-color: #06b6d4; box-shadow: 0 0 5px #06b6d4; border-color: #06b6d4; color: #06b6d4; }
+        .beat-cell.active.violin { background-color: #d946ef; box-shadow: 0 0 5px #d946ef; border-color: #d946ef; color: #d946ef; }
+        .beat-cell.active.cello { background-color: #be123c; box-shadow: 0 0 5px #be123c; border-color: #be123c; color: #be123c; }
+
+        /* Playing Effects */
         .beat-cell.playing {
-            background-color: #fff !important; box-shadow: 0 0 15px #fff; transform: scale(1.1); z-index: 5;
+            filter: brightness(2.5) saturate(1.5);
+            transform: scale(1.15);
+            z-index: 100;
+            border-color: #fff;
+            box-shadow: 0 0 10px currentColor, 0 0 25px currentColor; 
         }
+
+        .beat-cell.active.playing::after {
+            content: ''; position: absolute; top: 50%; left: 50%; width: 100%; height: 100%;
+            border: 2px solid currentColor; border-radius: 4px;
+            animation: shockwave 0.4s ease-out forwards; pointer-events: none; z-index: 90;
+        }
+        
+        .beat-cell:not(.active).playing {
+            background-color: #333; border-color: #888;
+            box-shadow: 0 0 8px rgba(255,255,255,0.5); filter: none; transform: scale(1.05);
+        }
+
+        .beat-cell.anim-pop {
+            animation: pop-effect 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* ----------------------- */
 
         .btn {
             background: transparent; border: 1px solid var(--neon-blue); color: var(--neon-blue);
@@ -144,6 +191,13 @@
         }
         .btn:hover { background: var(--neon-blue); color: black; box-shadow: 0 0 15px var(--neon-blue); }
         .btn.active { background: var(--neon-blue); color: black; box-shadow: 0 0 15px var(--neon-blue); }
+        
+        .btn-magic { border-color: var(--neon-purple); color: var(--neon-purple); }
+        .btn-magic:hover { background: var(--neon-purple); color: white; box-shadow: 0 0 15px var(--neon-purple); }
+
+        .btn-ai { border-color: #fbbf24; color: #fbbf24; }
+        .btn-ai:hover { background: #fbbf24; color: black; box-shadow: 0 0 15px #fbbf24; }
+
         .btn-red { border-color: var(--neon-pink); color: var(--neon-pink); }
         .btn-red:hover { background: var(--neon-pink); color: white; box-shadow: 0 0 15px var(--neon-pink); }
 
@@ -187,6 +241,21 @@
         }
         .storage-cloud { color: #00ccff; border-color: #00ccff; }
         .storage-local { color: #fbbf24; border-color: #fbbf24; }
+        
+        .loading-indicator {
+            width: 8px; height: 8px; background: var(--neon-blue); border-radius: 50%;
+            animation: blink 1s infinite; display: none; margin-left: 5px;
+        }
+        @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+        
+        #user-status { font-size: 10px; color: #555; margin-left: auto; margin-right: 10px; display: none; }
+
+        /* AI Prompt Input */
+        .ai-input {
+            width: 100%; background: #222; color: white; border: 1px solid #444; 
+            padding: 10px; border-radius: 4px; margin-bottom: 10px; outline: none;
+        }
+        .ai-input:focus { border-color: #fbbf24; }
     </style>
 </head>
 <body>
@@ -197,8 +266,8 @@
             <h1 class="text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-cyan-500" style="filter: drop-shadow(0 0 2px rgba(255,255,255,0.3));">
                 NEON BEAT
             </h1>
-            <!-- 저장소 모드 표시 (CLOUD / LOCAL) -->
             <div id="storage-mode" class="storage-indicator">INIT...</div>
+            <div id="auth-loading" class="loading-indicator" title="Connecting..."></div>
             
             <select id="lang-select" class="lang-select" onchange="changeLanguage(this.value)">
                 <option value="ko">🇰🇷 한국어</option>
@@ -217,6 +286,9 @@
         </div>
 
         <div class="flex items-center gap-2 flex-wrap justify-end">
+            <!-- AI Button -->
+            <button class="btn btn-ai" onclick="openAiModal()" data-i18n="ai_gen">✨ AI GEN</button>
+            <button class="btn btn-magic" onclick="autoGenerate()" data-i18n="magic">🪄 MAGIC</button>
             <button class="btn" id="play-btn">▶ PLAY</button>
             <button class="btn btn-red" onclick="clearAll()" data-i18n="clear">CLEAR</button>
             
@@ -256,7 +328,7 @@
         <p class="text-center text-gray-600 text-[10px] mt-1" id="help-text">...</p>
     </main>
 
-    <!-- Modal -->
+    <!-- Save/Load Modal -->
     <div id="modal-overlay" onclick="closeModal(event)">
         <div class="modal-box">
             <h2 id="modal-title" class="text-xl font-bold mb-4 text-cyan-400">SAVE SLOT</h2>
@@ -265,30 +337,43 @@
         </div>
     </div>
 
+    <!-- AI Prompt Modal -->
+    <div id="ai-modal-overlay" class="fixed top-0 left-0 w-full h-full bg-black/80 z-[100] hidden justify-center items-center">
+        <div class="modal-box w-[400px]">
+            <h2 class="text-2xl font-bold mb-4 text-yellow-400" data-i18n="ai_title">✨ AI Beat Generator</h2>
+            <p class="text-sm text-gray-400 mb-4" data-i18n="ai_desc">Describe the beat you want (e.g., 'Fast Cyberpunk', 'Chill Lofi').</p>
+            
+            <input type="text" id="ai-prompt" class="ai-input" placeholder="Enter your prompt here...">
+            
+            <div id="ai-loading" class="hidden mb-4">
+                <div class="loading-indicator mx-auto" style="display:block;"></div>
+                <p class="text-xs text-yellow-400 mt-2">Gemini is composing...</p>
+            </div>
+
+            <div class="flex gap-2 justify-center">
+                <button class="btn btn-red" onclick="closeAiModal()" data-i18n="close">CLOSE</button>
+                <button class="btn btn-ai" onclick="submitAiPrompt()" data-i18n="generate">GENERATE</button>
+            </div>
+        </div>
+    </div>
+
 <script type="module">
-/**
- * ==========================================
- * Hybrid Storage System (Cloud + Local)
- * ==========================================
- */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Storage Abstraction
 let storageService = {
-    mode: 'local', // 'local' or 'cloud'
+    mode: 'local',
     async init() {},
     async save(slot, data) {},
     async load(slot) {},
     async getMeta(slot) {}
 };
 
-// Check environment
 const isCloudEnv = typeof __firebase_config !== 'undefined';
 
 if (isCloudEnv) {
-    // --- Cloud Implementation ---
     const firebaseConfig = JSON.parse(__firebase_config);
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app';
     const app = initializeApp(firebaseConfig);
@@ -308,7 +393,6 @@ if (isCloudEnv) {
                 if (user) {
                     currentUser = user;
                     updateStorageUI('CLOUD');
-                    // Load settings
                     getDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'general'))
                         .then(snap => {
                             if(snap.exists() && snap.data().language) window.changeLanguage(snap.data().language, false);
@@ -338,7 +422,6 @@ if (isCloudEnv) {
         } catch { return null; }
     };
 
-    // Save language setting to cloud
     window.saveLangToStorage = (lang) => {
         if(currentUser) {
             setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'general'), { language: lang }, { merge: true });
@@ -346,7 +429,6 @@ if (isCloudEnv) {
     };
 
 } else {
-    // --- Local Storage Implementation ---
     storageService.mode = 'local';
     storageService.init = async () => {
         updateStorageUI('LOCAL');
@@ -379,7 +461,6 @@ function updateStorageUI(mode) {
     el.className = `storage-indicator ${mode === 'CLOUD' ? 'storage-cloud' : 'storage-local'}`;
 }
 
-// Global Wrappers
 window.saveSlot = async (slotId) => {
     const btn = document.getElementById(`slot-btn-${slotId}`);
     const originalText = btn.innerHTML;
@@ -443,7 +524,6 @@ window.renderSlotButtons = async () => {
         };
         container.appendChild(btn);
 
-        // Async Metadata Fetch
         storageService.getMeta(i).then(date => {
             const dateStr = date || getText('slotEmpty');
             const colorClass = date ? "text-cyan-300" : "text-gray-600";
@@ -452,7 +532,6 @@ window.renderSlotButtons = async () => {
     }
 };
 
-// Start
 storageService.init();
 
 </script>
@@ -469,63 +548,91 @@ const TRANSLATIONS = {
         save: "저장", load: "불러오기", wav: "WAV ⇩", addTrack: "+ 트랙 추가", saveSlot: "저장 슬롯",
         loadSlot: "불러오기 슬롯", close: "닫기", slotEmpty: "비어있음", saved: "저장됨: 슬롯",
         loaded: "불러옴: 슬롯", rendering: "변환 중...",
+        magic: "🪄 자동생성", ai_gen: "✨ AI 비트", ai_title: "✨ AI 비트 생성기", ai_desc: "원하는 비트 스타일을 설명해주세요 (예: '빠른 사이버펑크', '차분한 로파이').",
+        generate: "생성하기",
         help: "PC: 스페이스바로 재생/정지 • 모바일: 터치로 재생",
         inst_kick: "킥", inst_snare: "스네어", inst_hihat: "하이햇", inst_clap: "박수",
-        inst_piano: "피아노", inst_guitar: "기타", inst_bass: "베이스", inst_synth: "신디", inst_marimba: "마림바"
+        inst_piano: "피아노", inst_guitar: "기타", inst_bass: "베이스", inst_synth: "신디", inst_marimba: "마림바",
+        inst_tom: "탐", inst_crash: "크래쉬", inst_saxophone: "색소폰", inst_trumpet: "트럼펫", inst_flute: "플루트",
+        inst_violin: "바이올린", inst_cello: "첼로"
     },
     en: {
         master: "MASTER", play: "▶ PLAY", stop: "■ STOP", clear: "CLEAR", bpm: "BPM", len: "LEN",
         save: "SAVE", load: "LOAD", wav: "WAV ⇩", addTrack: "+ ADD TRACK", saveSlot: "SAVE SLOT",
         loadSlot: "LOAD FROM SLOT", close: "CLOSE", slotEmpty: "Empty", saved: "Saved Slot",
         loaded: "Loaded Slot", rendering: "RENDERING...",
+        magic: "🪄 MAGIC", ai_gen: "✨ AI GEN", ai_title: "✨ AI Beat Generator", ai_desc: "Describe the beat (e.g. 'Fast Cyberpunk', 'Chill Lofi').",
+        generate: "GENERATE",
         help: "PC: Space to Play/Stop • Mobile: Tap to Play",
         inst_kick: "Kick", inst_snare: "Snare", inst_hihat: "HiHat", inst_clap: "Clap",
-        inst_piano: "Piano", inst_guitar: "Guitar", inst_bass: "Bass", inst_synth: "Synth", inst_marimba: "Marimba"
+        inst_piano: "Piano", inst_guitar: "Guitar", inst_bass: "Bass", inst_synth: "Synth", inst_marimba: "Marimba",
+        inst_tom: "Tom", inst_crash: "Crash", inst_saxophone: "Saxophone", inst_trumpet: "Trumpet", inst_flute: "Flute",
+        inst_violin: "Violin", inst_cello: "Cello"
     },
     ja: {
         master: "マスター", play: "▶ 再生", stop: "■ 停止", clear: "クリア", bpm: "テンポ", len: "長さ",
         save: "保存", load: "読込", wav: "WAV ⇩", addTrack: "+ トラック追加", saveSlot: "スロットに保存",
         loadSlot: "スロットから読込", close: "閉じる", slotEmpty: "空き", saved: "保存しました",
         loaded: "読み込みました", rendering: "レンダリング中...",
+        magic: "🪄 自動生成", ai_gen: "✨ AI 生成", ai_title: "✨ AI ビート生成", ai_desc: "希望のスタイルを入力 (例: '速いサイバーパンク', '静かなLo-Fi').",
+        generate: "生成",
         help: "PC: スペースキーで再生/停止 • モバイル: タップして再生",
         inst_kick: "キック", inst_snare: "スネア", inst_hihat: "ハイハット", inst_clap: "クラップ",
-        inst_piano: "ピアノ", inst_guitar: "ギター", inst_bass: "ベース", inst_synth: "シンセ", inst_marimba: "マリンバ"
+        inst_piano: "ピアノ", inst_guitar: "ギター", inst_bass: "ベース", inst_synth: "シンセ", inst_marimba: "マリンバ",
+        inst_tom: "タム", inst_crash: "クラッシュ", inst_saxophone: "サックス", inst_trumpet: "トランペット", inst_flute: "フルート",
+        inst_violin: "バイオリン", inst_cello: "チェロ"
     },
     zh: {
         master: "主音量", play: "▶ 播放", stop: "■ 停止", clear: "清除", bpm: "速度", len: "长度",
         save: "保存", load: "加载", wav: "WAV ⇩", addTrack: "+ 添加轨道", saveSlot: "保存槽",
         loadSlot: "加载槽", close: "关闭", slotEmpty: "空", saved: "已保存",
         loaded: "已加载", rendering: "渲染中...",
+        magic: "🪄 自动生成", ai_gen: "✨ AI 生成", ai_title: "✨ AI 节拍生成器", ai_desc: "描述你想要的节拍 (例如：'快速赛博朋克'，'平静的Lofi').",
+        generate: "生成",
         help: "PC: 空格键播放/停止 • 手机: 点击播放",
         inst_kick: "底鼓", inst_snare: "军鼓", inst_hihat: "镲片", inst_clap: "拍手",
-        inst_piano: "钢琴", inst_guitar: "吉他", inst_bass: "贝斯", inst_synth: "合成器", inst_marimba: "马林巴"
+        inst_piano: "钢琴", inst_guitar: "吉他", inst_bass: "贝斯", inst_synth: "合成器", inst_marimba: "马林巴",
+        inst_tom: "通鼓", inst_crash: "吊镲", inst_saxophone: "萨克斯", inst_trumpet: "小号", inst_flute: "长笛",
+        inst_violin: "小提琴", inst_cello: "大提琴"
     },
     es: {
         master: "MAESTRO", play: "▶ REPRO", stop: "■ PARAR", clear: "LIMPIAR", bpm: "BPM", len: "LONG",
         save: "GUARDAR", load: "CARGAR", wav: "WAV ⇩", addTrack: "+ AÑADIR PISTA", saveSlot: "GUARDAR",
         loadSlot: "CARGAR", close: "CERRAR", slotEmpty: "Vacío", saved: "Guardado",
         loaded: "Cargado", rendering: "RENDERIZANDO...",
+        magic: "🪄 MAGIA", ai_gen: "✨ IA GEN", ai_title: "✨ Generador de Beats IA", ai_desc: "Describe el ritmo (ej: 'Cyberpunk rápido', 'Lofi relajado').",
+        generate: "GENERAR",
         help: "PC: Espacio para Repro/Parar • Móvil: Toque para Repro",
         inst_kick: "Bombo", inst_snare: "Caja", inst_hihat: "HiHat", inst_clap: "Aplauso",
-        inst_piano: "Piano", inst_guitar: "Guitarra", inst_bass: "Bajo", inst_synth: "Sinte", inst_marimba: "Marimba"
+        inst_piano: "Piano", inst_guitar: "Guitarra", inst_bass: "Bajo", inst_synth: "Sinte", inst_marimba: "Marimba",
+        inst_tom: "Tom", inst_crash: "Platillo", inst_saxophone: "Saxofón", inst_trumpet: "Trompeta", inst_flute: "Flauta",
+        inst_violin: "Violín", inst_cello: "Violonchelo"
     },
     fr: {
         master: "MASTER", play: "▶ LECTURE", stop: "■ ARRÊT", clear: "EFFACER", bpm: "BPM", len: "LONG",
         save: "SAUVER", load: "CHARGER", wav: "WAV ⇩", addTrack: "+ AJOUTER PISTE", saveSlot: "SAUVEGARDE",
         loadSlot: "CHARGER", close: "FERMER", slotEmpty: "Vide", saved: "Sauvegardé",
         loaded: "Chargé", rendering: "RENDU EN COURS...",
+        magic: "🪄 MAGIE", ai_gen: "✨ IA GEN", ai_title: "✨ Générateur de Beats IA", ai_desc: "Décrivez le rythme (ex : 'Cyberpunk rapide', 'Lofi calme').",
+        generate: "GÉNÉRER",
         help: "PC : Espace pour Lecture/Arrêt • Mobile : Appuyez pour Lecture",
         inst_kick: "Kick", inst_snare: "Snare", inst_hihat: "HiHat", inst_clap: "Clap",
-        inst_piano: "Piano", inst_guitar: "Guitare", inst_bass: "Basse", inst_synth: "Synthé", inst_marimba: "Marimba"
+        inst_piano: "Piano", inst_guitar: "Guitare", inst_bass: "Basse", inst_synth: "Synthé", inst_marimba: "Marimba",
+        inst_tom: "Tom", inst_crash: "Crash", inst_saxophone: "Saxophone", inst_trumpet: "Trompette", inst_flute: "Flûte",
+        inst_violin: "Violon", inst_cello: "Violoncelle"
     },
     de: {
         master: "MASTER", play: "▶ START", stop: "■ STOPP", clear: "LÖSCHEN", bpm: "BPM", len: "LÄNGE",
         save: "SPEICHERN", load: "LADEN", wav: "WAV ⇩", addTrack: "+ SPUR HINZUFÜGEN", saveSlot: "SPEICHERPLATZ",
         loadSlot: "LADEN", close: "SCHLIEßEN", slotEmpty: "Leer", saved: "Gespeichert",
         loaded: "Geladen", rendering: "RENDERN...",
+        magic: "🪄 MAGIE", ai_gen: "✨ KI GEN", ai_title: "✨ KI Beat Generator", ai_desc: "Beschreibe den Beat (z.B. 'Schneller Cyberpunk', 'Chill Lofi').",
+        generate: "GENERIEREN",
         help: "PC: Leertaste für Start/Stopp • Mobil: Tippen für Start",
         inst_kick: "Kick", inst_snare: "Snare", inst_hihat: "HiHat", inst_clap: "Klatschen",
-        inst_piano: "Klavier", inst_guitar: "Gitarre", inst_bass: "Bass", inst_synth: "Synth", inst_marimba: "Marimba"
+        inst_piano: "Klavier", inst_guitar: "Gitarre", inst_bass: "Bass", inst_synth: "Synth", inst_marimba: "Marimba",
+        inst_tom: "Tom", inst_crash: "Crash", inst_saxophone: "Saxophon", inst_trumpet: "Trompete", inst_flute: "Flöte",
+        inst_violin: "Geige", inst_cello: "Cello"
     }
 };
 
@@ -547,6 +654,7 @@ function updateLanguageUI(lang) {
     
     updatePlayButtonText();
     document.getElementById('help-text').innerText = t.help;
+    document.getElementById('ai-prompt').placeholder = t.ai_desc; 
     renderGrid(); 
 }
 
@@ -571,8 +679,76 @@ masterGain.gain.value = 0.8;
 const compressor = audioCtx.createDynamicsCompressor();
 compressor.threshold.setValueAtTime(-24, audioCtx.currentTime);
 compressor.ratio.setValueAtTime(12, audioCtx.currentTime);
+
+// --- REVERB & SPACE ---
+const reverbNode = audioCtx.createConvolver();
+function createImpulseResponse(duration) {
+    const rate = audioCtx.sampleRate;
+    const length = rate * duration;
+    const decay = 2.0;
+    const impulse = audioCtx.createBuffer(2, length, rate);
+    const L = impulse.getChannelData(0);
+    const R = impulse.getChannelData(1);
+    for (let i = 0; i < length; i++) {
+        const n = i / length;
+        L[i] = (Math.random() * 2 - 1) * Math.pow(1 - n, decay);
+        R[i] = (Math.random() * 2 - 1) * Math.pow(1 - n, decay);
+    }
+    return impulse;
+}
+reverbNode.buffer = createImpulseResponse(1.5);
+
+const dryNode = audioCtx.createGain();
+const wetNode = audioCtx.createGain();
+dryNode.gain.value = 0.8; 
+wetNode.gain.value = 0.3;
+
 masterGain.connect(compressor);
-compressor.connect(audioCtx.destination);
+compressor.connect(dryNode);
+compressor.connect(wetNode);
+wetNode.connect(reverbNode);
+reverbNode.connect(audioCtx.destination);
+dryNode.connect(audioCtx.destination);
+
+// --- WaveTable Generators ---
+function createWaveTable(type) {
+    // Basic Fourier coefficients for custom waves
+    let real, imag;
+    if (type === 'piano') {
+        // Piano-like harmonic series
+        const terms = 15;
+        real = new Float32Array(terms);
+        imag = new Float32Array(terms);
+        for(let i=1; i<terms; i++) {
+            imag[i] = Math.pow(0.6, i); // Fast decay harmonics
+        }
+    } else if (type === 'organ') {
+        const terms = 10;
+        real = new Float32Array(terms);
+        imag = new Float32Array(terms);
+        imag[1] = 1.0; imag[2] = 0.8; imag[4] = 0.6; imag[8] = 0.4;
+    } else if (type === 'brass') {
+        const terms = 20;
+        real = new Float32Array(terms);
+        imag = new Float32Array(terms);
+        for(let i=1; i<terms; i++) imag[i] = 1/i; // Sawtooth-like
+    } else if (type === 'strings') {
+        // Rich harmonics
+        const terms = 30;
+        real = new Float32Array(terms);
+        imag = new Float32Array(terms);
+        for(let i=1; i<terms; i++) imag[i] = 0.5/i;
+    }
+    return audioCtx.createPeriodicWave(real, imag);
+}
+
+// Pre-compute tables
+const waveTables = {
+    piano: createWaveTable('piano'),
+    brass: createWaveTable('brass'),
+    strings: createWaveTable('strings'),
+    organ: createWaveTable('organ')
+};
 
 const NOTE_FREQS = {
     'C2': 65.41, 'D2': 73.42, 'E2': 82.41, 'G2': 98.00, 'A2': 110.00,
@@ -581,76 +757,308 @@ const NOTE_FREQS = {
     'C5': 523.25, 'E5': 659.25, 'G5': 783.99, 'A5': 880.00
 };
 
+// -- 🎻 REAL WAVEFORM SYNTHESIS 🎻 --
 const Sounds = {
     play: (type, context, destination, time, note, volume) => {
         const vol = (volume !== undefined ? volume : 1.0);
+        const freq = NOTE_FREQS[note] || 440; 
+
+        // Helper: Noise Buffer
+        const createNoiseBuffer = (duration) => {
+            const bSize = context.sampleRate * duration;
+            const b = context.createBuffer(1, bSize, context.sampleRate);
+            const d = b.getChannelData(0);
+            for(let i=0; i<bSize; i++) d[i] = Math.random() * 2 - 1;
+            return b;
+        };
+
         const methods = {
             'Kick': () => {
-                const osc = context.createOscillator(); const g = context.createGain();
-                osc.frequency.setValueAtTime(150, time); osc.frequency.exponentialRampToValueAtTime(0.001, time + 0.5);
-                g.gain.setValueAtTime(1 * vol, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
-                osc.connect(g); g.connect(destination); osc.start(time); osc.stop(time + 0.5);
+                const osc = context.createOscillator();
+                const g = context.createGain();
+                osc.frequency.setValueAtTime(150, time);
+                osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5);
+                g.gain.setValueAtTime(1 * vol, time);
+                g.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
+                
+                const cOsc = context.createOscillator();
+                const cG = context.createGain();
+                cOsc.frequency.setValueAtTime(300, time);
+                cOsc.frequency.exponentialRampToValueAtTime(0.01, time + 0.02);
+                cG.gain.setValueAtTime(0.5 * vol, time);
+                cG.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
+                cOsc.connect(cG); cG.connect(destination);
+                cOsc.start(time); cOsc.stop(time + 0.02);
+
+                osc.connect(g); g.connect(destination);
+                osc.start(time); osc.stop(time + 0.5);
             },
             'Snare': () => {
-                const osc = context.createOscillator(); const g = context.createGain();
-                osc.type = 'triangle'; g.gain.setValueAtTime(0.7 * vol, time); g.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
-                osc.connect(g); g.connect(destination); osc.start(time); osc.stop(time + 0.1);
-                const bSize = context.sampleRate * 0.1; const b = context.createBuffer(1, bSize, context.sampleRate);
-                const d = b.getChannelData(0); for(let i=0;i<bSize;i++) d[i] = Math.random()*2-1;
-                const noise = context.createBufferSource(); noise.buffer = b; const ng = context.createGain();
-                ng.gain.setValueAtTime(0.4 * vol, time); ng.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
-                noise.connect(ng); ng.connect(destination); noise.start(time);
+                const osc = context.createOscillator();
+                osc.type = 'triangle';
+                const g = context.createGain();
+                osc.frequency.setValueAtTime(250, time);
+                g.gain.setValueAtTime(0.5 * vol, time);
+                g.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+                osc.connect(g); g.connect(destination);
+                osc.start(time); osc.stop(time + 0.1);
+
+                const noise = context.createBufferSource();
+                noise.buffer = createNoiseBuffer(0.2);
+                const nf = context.createBiquadFilter();
+                nf.type = 'highpass';
+                nf.frequency.value = 1000;
+                const ng = context.createGain();
+                ng.gain.setValueAtTime(0.8 * vol, time);
+                ng.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
+                noise.connect(nf); nf.connect(ng); ng.connect(destination);
+                noise.start(time);
             },
             'HiHat': () => {
-                const osc = context.createOscillator(); const g = context.createGain();
-                osc.type = 'square'; osc.frequency.setValueAtTime(1200, time);
-                const f = context.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 10000;
-                g.gain.setValueAtTime(0.2 * vol, time); g.gain.exponentialRampToValueAtTime(0.01, time + 0.05);
-                osc.connect(f); f.connect(g); g.connect(destination); osc.start(time); osc.stop(time + 0.05);
+                const noise = context.createBufferSource();
+                noise.buffer = createNoiseBuffer(0.1);
+                const f = context.createBiquadFilter();
+                f.type = 'highpass';
+                f.frequency.value = 8000;
+                const g = context.createGain();
+                g.gain.setValueAtTime(0.6 * vol, time);
+                g.gain.exponentialRampToValueAtTime(0.01, time + 0.05);
+                noise.connect(f); f.connect(g); g.connect(destination);
+                noise.start(time);
             },
             'Clap': () => {
-                const bSize = context.sampleRate * 0.2; const b = context.createBuffer(1, bSize, context.sampleRate);
-                const d = b.getChannelData(0); for(let i=0;i<bSize;i++) d[i] = (Math.random()*2-1)*0.5;
-                const n = context.createBufferSource(); n.buffer = b; const g = context.createGain();
-                g.gain.setValueAtTime(0, time); g.gain.linearRampToValueAtTime(0.5 * vol, time + 0.01);
-                g.gain.exponentialRampToValueAtTime(0.01, time + 0.15); n.connect(g); g.connect(destination); n.start(time);
+                const noise = context.createBufferSource();
+                noise.buffer = createNoiseBuffer(0.2);
+                const f = context.createBiquadFilter();
+                f.type = 'bandpass';
+                f.frequency.value = 1500;
+                const g = context.createGain();
+                g.gain.setValueAtTime(0, time);
+                g.gain.linearRampToValueAtTime(0.8 * vol, time + 0.01);
+                g.gain.exponentialRampToValueAtTime(0.01, time + 0.15);
+                noise.connect(f); f.connect(g); g.connect(destination);
+                noise.start(time);
             },
-            'Piano': () => {
-                const freq = NOTE_FREQS[note] || 440; const osc = context.createOscillator();
-                osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, time);
-                const g = context.createGain(); g.gain.setValueAtTime(0, time);
-                g.gain.linearRampToValueAtTime(0.5 * vol, time + 0.02); g.gain.exponentialRampToValueAtTime(0.001, time + 1.2);
-                osc.connect(g); g.connect(destination); osc.start(time); osc.stop(time + 1.2);
+            'Tom': () => {
+                const osc = context.createOscillator();
+                const g = context.createGain();
+                const base = freq / 2;
+                osc.frequency.setValueAtTime(base, time);
+                osc.frequency.exponentialRampToValueAtTime(base * 0.8, time + 0.2);
+                g.gain.setValueAtTime(0.8 * vol, time);
+                g.gain.exponentialRampToValueAtTime(0.001, time + 0.4);
+                osc.connect(g); g.connect(destination);
+                osc.start(time); osc.stop(time + 0.4);
             },
-            'Guitar': () => {
-                const freq = NOTE_FREQS[note] || 440; const osc = context.createOscillator();
-                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(freq, time);
-                const f = context.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(3000, time); f.frequency.exponentialRampToValueAtTime(100, time + 0.2);
-                const g = context.createGain(); g.gain.setValueAtTime(0, time);
-                g.gain.linearRampToValueAtTime(0.4 * vol, time + 0.01); g.gain.exponentialRampToValueAtTime(0.001, time + 0.8);
-                osc.connect(f); f.connect(g); g.connect(destination); osc.start(time); osc.stop(time + 0.8);
+            'Crash': () => {
+                const noise = context.createBufferSource();
+                noise.buffer = createNoiseBuffer(2.0);
+                const f = context.createBiquadFilter();
+                f.type = 'highpass';
+                f.frequency.value = 3000;
+                const g = context.createGain();
+                g.gain.setValueAtTime(0.6 * vol, time);
+                g.gain.exponentialRampToValueAtTime(0.001, time + 1.5);
+                noise.connect(f); f.connect(g); g.connect(destination);
+                noise.start(time);
+            },
+            'Piano': () => { // WaveTable Synthesis
+                const osc = context.createOscillator();
+                osc.setPeriodicWave(waveTables.piano);
+                osc.frequency.setValueAtTime(freq, time);
+
+                const g = context.createGain();
+                g.gain.setValueAtTime(0, time);
+                g.gain.linearRampToValueAtTime(0.6 * vol, time + 0.01); // Sharp attack
+                g.gain.exponentialRampToValueAtTime(0.001, time + 1.5); // Long sustain
+
+                osc.connect(g); g.connect(destination);
+                osc.start(time); osc.stop(time + 1.5);
+            },
+            'Guitar': () => { // Karplus-Strong
+                const osc = context.createOscillator();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(freq, time);
+                const f = context.createBiquadFilter();
+                f.type = 'lowpass';
+                f.frequency.setValueAtTime(400, time); 
+                f.frequency.linearRampToValueAtTime(3000, time + 0.05); // Pluck
+                f.frequency.exponentialRampToValueAtTime(400, time + 0.3); 
+                
+                const g = context.createGain();
+                g.gain.setValueAtTime(0, time);
+                g.gain.linearRampToValueAtTime(0.5 * vol, time + 0.01);
+                g.gain.exponentialRampToValueAtTime(0.001, time + 1.0);
+                
+                osc.connect(f); f.connect(g); g.connect(destination);
+                osc.start(time); osc.stop(time + 1.0);
             },
             'Bass': () => {
-                const freq = NOTE_FREQS[note] || 220; const osc = context.createOscillator();
-                osc.type = 'square'; osc.frequency.setValueAtTime(freq, time);
-                const f = context.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(1000, time); f.frequency.exponentialRampToValueAtTime(50, time + 0.4);
-                const g = context.createGain(); g.gain.setValueAtTime(0.9 * vol, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
-                osc.connect(f); f.connect(g); g.connect(destination); osc.start(time); osc.stop(time + 0.5);
+                const osc = context.createOscillator();
+                osc.setPeriodicWave(waveTables.brass); // Rich harmonics
+                osc.frequency.setValueAtTime(freq/2, time);
+
+                const f = context.createBiquadFilter();
+                f.type = 'lowpass';
+                f.frequency.setValueAtTime(600, time);
+
+                const g = context.createGain();
+                g.gain.setValueAtTime(0.8 * vol, time);
+                g.gain.exponentialRampToValueAtTime(0.001, time + 0.6);
+
+                osc.connect(f); f.connect(g); g.connect(destination);
+                osc.start(time); osc.stop(time + 0.6);
             },
             'Synth': () => {
-                const freq = NOTE_FREQS[note] || 440; const osc = context.createOscillator();
-                osc.type = 'square'; osc.frequency.setValueAtTime(freq, time);
-                const f = context.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(1000, time); f.frequency.linearRampToValueAtTime(8000, time + 0.1);
-                const g = context.createGain(); g.gain.setValueAtTime(0.3 * vol, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
-                osc.connect(f); f.connect(g); g.connect(destination); osc.start(time); osc.stop(time + 0.3);
+                const osc1 = context.createOscillator();
+                const osc2 = context.createOscillator();
+                osc1.type = 'sawtooth'; osc2.type = 'sawtooth';
+                osc1.frequency.setValueAtTime(freq, time);
+                osc2.frequency.setValueAtTime(freq, time);
+                osc2.detune.value = 15;
+
+                const f = context.createBiquadFilter();
+                f.type = 'lowpass'; f.frequency.setValueAtTime(2000, time);
+
+                const g = context.createGain();
+                g.gain.setValueAtTime(0.3 * vol, time);
+                g.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
+
+                osc1.connect(f); osc2.connect(f); f.connect(g); g.connect(destination);
+                osc1.start(time); osc1.stop(time + 0.5);
+                osc2.start(time); osc2.stop(time + 0.5);
             },
             'Marimba': () => {
-                const freq = NOTE_FREQS[note] || 440; const osc = context.createOscillator();
-                osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, time);
-                const f = context.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(freq * 4, time);
-                const g = context.createGain(); g.gain.setValueAtTime(0, time);
-                g.gain.linearRampToValueAtTime(0.8 * vol, time + 0.01); g.gain.exponentialRampToValueAtTime(0.001, time + 0.4);
-                osc.connect(f); f.connect(g); g.connect(destination); osc.start(time); osc.stop(time + 0.4);
+                const osc = context.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, time);
+                
+                const g = context.createGain();
+                g.gain.setValueAtTime(0, time);
+                g.gain.linearRampToValueAtTime(0.8 * vol, time + 0.01);
+                g.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
+                
+                osc.connect(g); g.connect(destination);
+                osc.start(time); osc.stop(time + 0.3);
+            },
+            'Saxophone': () => {
+                const osc = context.createOscillator();
+                osc.setPeriodicWave(waveTables.brass);
+                osc.frequency.setValueAtTime(freq, time);
+                
+                // Vibrato
+                const lfo = context.createOscillator();
+                lfo.frequency.value = 5;
+                const lfoG = context.createGain();
+                lfoG.gain.value = 10;
+                lfo.connect(lfoG); lfoG.connect(osc.frequency);
+                lfo.start(time); lfo.stop(time+1.0);
+
+                const f = context.createBiquadFilter();
+                f.type = 'lowpass';
+                f.frequency.setValueAtTime(800, time);
+                f.frequency.linearRampToValueAtTime(2000, time + 0.2);
+
+                const g = context.createGain();
+                g.gain.setValueAtTime(0, time);
+                g.gain.linearRampToValueAtTime(0.5 * vol, time + 0.1);
+                g.gain.exponentialRampToValueAtTime(0.001, time + 1.0);
+
+                osc.connect(f); f.connect(g); g.connect(destination);
+                osc.start(time); osc.stop(time + 1.0);
+            },
+            'Trumpet': () => {
+                const osc = context.createOscillator();
+                osc.setPeriodicWave(waveTables.brass);
+                osc.frequency.setValueAtTime(freq, time);
+                
+                const f = context.createBiquadFilter();
+                f.type = 'lowpass'; f.frequency.setValueAtTime(1500, time); f.Q.value = 3;
+
+                const g = context.createGain();
+                g.gain.setValueAtTime(0, time);
+                g.gain.linearRampToValueAtTime(0.6 * vol, time + 0.05);
+                g.gain.exponentialRampToValueAtTime(0.001, time + 0.8);
+
+                osc.connect(f); f.connect(g); g.connect(destination);
+                osc.start(time); osc.stop(time + 0.8);
+            },
+            'Flute': () => {
+                const osc = context.createOscillator();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(freq, time);
+
+                const noise = context.createBufferSource();
+                noise.buffer = createNoiseBuffer(1.0);
+                const nf = context.createBiquadFilter();
+                nf.type = 'bandpass'; nf.frequency.value = freq;
+                const ng = context.createGain();
+                ng.gain.value = 0.2 * vol;
+
+                const g = context.createGain();
+                g.gain.setValueAtTime(0, time);
+                g.gain.linearRampToValueAtTime(0.6 * vol, time + 0.1);
+                g.gain.exponentialRampToValueAtTime(0.001, time + 1.0);
+
+                osc.connect(g); 
+                noise.connect(nf); nf.connect(ng); ng.connect(g);
+                g.connect(destination);
+                
+                osc.start(time); osc.stop(time + 1.0);
+                noise.start(time); noise.stop(time + 1.0);
+            },
+            'Violin': () => {
+                // WaveTable Strings
+                const osc = context.createOscillator();
+                osc.setPeriodicWave(waveTables.strings);
+                osc.frequency.setValueAtTime(freq, time);
+
+                // Vibrato
+                const lfo = context.createOscillator();
+                lfo.frequency.value = 6;
+                const lfoG = context.createGain();
+                lfoG.gain.value = 10;
+                lfo.connect(lfoG);
+                lfoG.connect(osc.frequency);
+                lfo.start(time); lfo.stop(time+1.5);
+
+                const f = context.createBiquadFilter();
+                f.type = 'lowpass'; 
+                f.frequency.value = 3000;
+
+                const g = context.createGain();
+                g.gain.setValueAtTime(0, time);
+                // Sharper attack (0.05s) for rhythmic definition
+                g.gain.linearRampToValueAtTime(0.5 * vol, time + 0.05); 
+                g.gain.exponentialRampToValueAtTime(0.001, time + 1.5);
+
+                osc.connect(f); f.connect(g); g.connect(destination);
+                osc.start(time); osc.stop(time + 1.5);
+            },
+            'Cello': () => {
+                const osc = context.createOscillator();
+                osc.setPeriodicWave(waveTables.strings);
+                osc.frequency.setValueAtTime(freq, time);
+
+                const lfo = context.createOscillator();
+                lfo.frequency.value = 4;
+                const lfoG = context.createGain();
+                lfoG.gain.value = 8;
+                lfo.connect(lfoG); 
+                lfoG.connect(osc.frequency);
+                lfo.start(time); lfo.stop(time+2.0);
+
+                const f = context.createBiquadFilter();
+                f.type = 'lowpass'; 
+                f.frequency.setValueAtTime(1000, time);
+
+                const g = context.createGain();
+                g.gain.setValueAtTime(0, time);
+                // Faster attack: 0.15s
+                g.gain.linearRampToValueAtTime(0.6 * vol, time + 0.15); 
+                g.gain.exponentialRampToValueAtTime(0.001, time + 2.0);
+
+                osc.connect(f); f.connect(g); g.connect(destination);
+                osc.start(time); osc.stop(time + 2.0);
             }
         };
         if (methods[type]) methods[type]();
@@ -666,8 +1074,15 @@ let timerID;
 let lookahead = 25.0;
 let scheduleAheadTime = 0.1;
 
-const INST_TYPES = ['Kick', 'Snare', 'HiHat', 'Clap', 'Piano', 'Guitar', 'Bass', 'Synth', 'Marimba'];
-const MELODY_INSTS = ['Piano', 'Guitar', 'Bass', 'Synth', 'Marimba'];
+const INST_TYPES = [
+    'Kick', 'Snare', 'HiHat', 'Clap', 'Tom', 'Crash', 
+    'Piano', 'Guitar', 'Bass', 'Synth', 'Marimba',
+    'Saxophone', 'Trumpet', 'Flute', 'Violin', 'Cello'
+];
+const MELODY_INSTS = [
+    'Piano', 'Guitar', 'Bass', 'Synth', 'Marimba',
+    'Saxophone', 'Trumpet', 'Flute', 'Violin', 'Cello', 'Tom' 
+];
 const NOTE_KEYS = Object.keys(NOTE_FREQS);
 
 window.tracks = [
@@ -718,6 +1133,112 @@ window.updateStepCount = function(newSteps) {
     window.STEPS = STEPS;
     if (currentStep >= STEPS) currentStep = 0;
     renderGrid();
+};
+
+window.autoGenerate = function() {
+    window.tracks.forEach(track => {
+        track.pattern.fill(false);
+        const type = track.type;
+        const len = track.pattern.length;
+        if (type === 'Kick') {
+            for(let i=0; i<len; i+=4) track.pattern[i] = true;
+            if(Math.random() > 0.5) track.pattern[Math.floor(Math.random()*len)] = true;
+        } else if (type === 'Snare' || type === 'Clap') {
+            if(len >= 5) track.pattern[4] = true;
+            if(len >= 13) track.pattern[12] = true;
+            if(Math.random() > 0.7) track.pattern[Math.floor(Math.random()*len)] = true;
+        } else if (type === 'HiHat') {
+            for(let i=0; i<len; i+=2) track.pattern[i] = true;
+            if(Math.random() > 0.5) track.pattern[Math.floor(Math.random()*len)] = false;
+        } else if (type === 'Crash') {
+            track.pattern[0] = true; 
+        } else {
+            const scale = ['C', 'D', 'E', 'G', 'A'];
+            const octave = (type === 'Bass' || type === 'Cello') ? '2' : (type === 'Synth' || type === 'Flute' || type === 'Violin' ? '4' : '3');
+            const randomNote = scale[Math.floor(Math.random() * scale.length)] + octave;
+            if(NOTE_FREQS[randomNote]) track.note = randomNote;
+            for(let i=0; i<len; i++) {
+                if(Math.random() > 0.85) track.pattern[i] = true;
+            }
+        }
+    });
+    renderGrid();
+};
+
+/**
+ * ==========================================
+ * Gemini AI Integration
+ * ==========================================
+ */
+window.openAiModal = function() {
+    document.getElementById('ai-modal-overlay').style.display = 'flex';
+    document.getElementById('ai-prompt').focus();
+};
+
+window.closeAiModal = function() {
+    document.getElementById('ai-modal-overlay').style.display = 'none';
+    document.getElementById('ai-loading').style.display = 'none';
+};
+
+window.submitAiPrompt = async function() {
+    const prompt = document.getElementById('ai-prompt').value;
+    if(!prompt) return;
+    
+    document.getElementById('ai-loading').style.display = 'block';
+    
+    const apiKey = ""; 
+    const systemPrompt = `You are a music sequencer data generator. 
+    Available Instruments: Kick, Snare, HiHat, Clap, Tom, Crash, Piano, Guitar, Bass, Synth, Marimba, Saxophone, Trumpet, Flute, Violin, Cello.
+    Available Notes: C2-B5 (e.g. C3, F#4).
+    Output Format: JSON object with 'bpm' (int, 60-180), 'steps' (int, 16/32/64), and 'tracks' (array).
+    Each track: { "type": "InstrumentName", "note": "NoteName", "vol": 0.0-1.0, "pattern": [true, false, ...] }.
+    The 'pattern' array length MUST match 'steps'.
+    Create a beat matching the user's description.
+    Response must be ONLY valid JSON. No markdown.`;
+    
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: "User Prompt: " + prompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] }
+            })
+        });
+        
+        const result = await response.json();
+        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if(text) {
+            const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            const data = JSON.parse(jsonStr);
+            
+            if(data.bpm) {
+                BPM = data.bpm;
+                window.BPM = BPM;
+                document.getElementById('bpm-slider').value = BPM;
+                document.getElementById('bpm-display').innerText = BPM;
+            }
+            if(data.steps) {
+                window.updateStepCount(data.steps);
+                document.getElementById('steps-select').value = data.steps;
+            }
+            if(data.tracks) {
+                window.tracks = data.tracks;
+                renderGrid();
+            }
+            
+            closeAiModal();
+        } else {
+            alert("AI generation failed. Please try again.");
+            document.getElementById('ai-loading').style.display = 'none';
+        }
+        
+    } catch(e) {
+        console.error(e);
+        alert("Error connecting to AI: " + e.message);
+        document.getElementById('ai-loading').style.display = 'none';
+    }
 };
 
 function renderGrid() {
@@ -784,6 +1305,11 @@ function renderGrid() {
             const toggle = () => {
                 track.pattern[stepIdx] = !track.pattern[stepIdx];
                 renderCell(cell, track.pattern[stepIdx], track.type);
+                
+                cell.classList.remove('anim-pop');
+                void cell.offsetWidth; 
+                cell.classList.add('anim-pop');
+                
                 if(track.pattern[stepIdx] && !isPlaying) {
                     if(audioCtx.state === 'suspended') audioCtx.resume();
                     Sounds.play(track.type, audioCtx, masterGain, audioCtx.currentTime, track.note, track.vol);
@@ -932,7 +1458,7 @@ window.exportWav = async function() {
     }
 
     const buffer = await offlineCtx.startRendering();
-    const wav = bufferToWave(buffer, duration * 44100);
+    const wav = bufferToWave(buffer);
     const blob = new Blob([wav], { type: "audio/wav" });
     const url = URL.createObjectURL(blob);
     
@@ -944,9 +1470,10 @@ window.exportWav = async function() {
     btn.innerText = originalText;
 };
 
-function bufferToWave(abuffer, len) {
+// Fixed bufferToWave function
+function bufferToWave(abuffer) {
     const numOfChan = abuffer.numberOfChannels;
-    const length = len * numOfChan * 2 + 44;
+    const length = abuffer.length * numOfChan * 2 + 44;
     const buffer = new ArrayBuffer(length);
     const view = new DataView(buffer);
     const channels = [];
